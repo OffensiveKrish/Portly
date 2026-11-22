@@ -102,6 +102,26 @@ internal data class HttpsRenameReq(val path: String, val newName: String)
 @Serializable
 internal data class HttpsDeleteReq(val path: String)
 
+@Serializable
+internal data class HttpsBatchDeleteReq(val paths: List<String>)
+
+@Serializable
+internal data class HttpsBatchDeleteResp(val successCount: Int, val failedCount: Int)
+
+@Serializable
+internal data class HttpsDeviceInfo(
+    val deviceName: String,
+    val androidVersion: String,
+    val serverVersion: String,
+    val totalStorageBytes: Long,
+    val freeStorageBytes: Long,
+    val usedStorageBytes: Long,
+    val totalFormatted: String,
+    val freeFormatted: String,
+    val usedFormatted: String,
+    val usedPercent: Int,
+)
+
 private data class HttpsSessionRecord(
     val token: String,
     val username: String,
@@ -271,7 +291,67 @@ internal class KtorHttpsProtocolServer(
                             HttpHeaders.SetCookie,
                             "$COOKIE_NAME=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
                         )
-                        call.respondRedirect("/Web/Account/Login.htm")
+                        call.respondRedirect("/login")
+                    }
+
+                    get("/assets/logo.png") {
+                        call.respondBytes(HttpsWebUiHtml.LOGO_PNG_BYTES, ContentType.parse("image/png"))
+                    }
+
+                    get("/favicon.ico") {
+                        call.respondBytes(HttpsWebUiHtml.LOGO_PNG_BYTES, ContentType.parse("image/png"))
+                    }
+
+                    get("/api/device-info") {
+                        val user = authorizeOrChallenge(call, config, passwords, redirectToLogin = false) ?: return@get
+                        call.respondText(
+                            json.encodeToString(getDeviceInfo()),
+                            ContentType.Application.Json,
+                        )
+                    }
+
+                    post("/api/batch-delete") {
+                        val user = authorizeOrChallenge(call, config, passwords, redirectToLogin = false) ?: return@post
+                        if (config.readOnly || !hasPermission(config, user, ServerPermission.DELETE)) {
+                            call.respond(HttpStatusCode.Forbidden, "Delete permission denied")
+                            return@post
+                        }
+                        val req = json.decodeFromString<HttpsBatchDeleteReq>(call.receiveText())
+                        var success = 0
+                        var failed = 0
+                        for (p in req.paths) {
+                            if (deleteItem(config, p)) success++ else failed++
+                        }
+                        appendLog(LogLevel.INFO, "$user batch deleted $success item(s) ($failed failed)", config)
+                        call.respondText(
+                            json.encodeToString(HttpsBatchDeleteResp(success, failed)),
+                            ContentType.Application.Json,
+                        )
+                    }
+
+                    get("/api/zip-download") {
+                        val user = authorizeOrChallenge(call, config, passwords, redirectToLogin = true) ?: return@get
+                        if (!hasPermission(config, user, ServerPermission.READ)) {
+                            call.respond(HttpStatusCode.Forbidden, "Read permission denied")
+                            return@get
+                        }
+                        val pathsParam = call.request.queryParameters["paths"].orEmpty()
+                        val paths = pathsParam.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                        if (paths.isEmpty()) {
+                            call.respond(HttpStatusCode.BadRequest, "No paths provided")
+                            return@get
+                        }
+                        serveZipDownload(call, config, user, paths)
+                    }
+
+                    get("/preview") {
+                        val user = authorizeOrChallenge(call, config, passwords, redirectToLogin = true) ?: return@get
+                        if (!hasPermission(config, user, ServerPermission.READ)) {
+                            call.respond(HttpStatusCode.Forbidden, "Read permission denied")
+                            return@get
+                        }
+                        val reqPath = call.request.queryParameters["path"] ?: ""
+                        serveFilePreview(call, config, user, reqPath)
                     }
 
                     get("/") {
@@ -813,6 +893,132 @@ internal class KtorHttpsProtocolServer(
         val target = PathValidator.canonicalizeUnderRoot(root, path).getOrNull() ?: return false
         if (target == root.canonicalFile) return false
         return target.deleteRecursively()
+    }
+
+    private fun getDeviceInfo(): HttpsDeviceInfo {
+        val model = "${android.os.Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${android.os.Build.MODEL}"
+        val osVer = "Android ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})"
+        val rootPath = currentConfig?.rootDirectoryPath ?: android.os.Environment.getExternalStorageDirectory().path
+        val stat = runCatching { android.os.StatFs(rootPath) }.getOrNull()
+            ?: runCatching { android.os.StatFs(android.os.Environment.getExternalStorageDirectory().path) }.getOrNull()
+        val total = stat?.totalBytes ?: (128L * 1024 * 1024 * 1024)
+        val free = stat?.availableBytes ?: (64L * 1024 * 1024 * 1024)
+        val used = (total - free).coerceAtLeast(0L)
+        val pct = if (total > 0L) ((used * 100) / total).toInt() else 0
+        return HttpsDeviceInfo(
+            deviceName = model,
+            androidVersion = osVer,
+            serverVersion = "2026.11.0",
+            totalStorageBytes = total,
+            freeStorageBytes = free,
+            usedStorageBytes = used,
+            totalFormatted = Formatters.formatBytes(total),
+            freeFormatted = Formatters.formatBytes(free),
+            usedFormatted = Formatters.formatBytes(used),
+            usedPercent = pct,
+        )
+    }
+
+    private suspend fun serveFilePreview(call: ApplicationCall, config: ServerConfig, username: String, reqPath: String) {
+        val ip = clientIp(call)
+        val treeUri = config.rootTreeUriString?.takeIf { it.isNotBlank() }?.let(Uri::parse)
+        if (treeUri != null && context != null) {
+            val doc = resolveSafDoc(context, treeUri, reqPath)
+            if (doc == null || !doc.exists() || doc.isDirectory) {
+                call.respond(HttpStatusCode.Forbidden, "Unavailable or unsafe path")
+                return
+            }
+            val input = context.contentResolver.openInputStream(doc.uri) ?: run {
+                call.respond(HttpStatusCode.InternalServerError, "Cannot open file")
+                return
+            }
+            val ext = (doc.name ?: "").substringAfterLast('.', "").lowercase()
+            val mimeType = resolveMimeType(ext)
+            call.response.header(HttpHeaders.ContentDisposition, "inline; filename=\"${PathValidator.sanitizeFileName(doc.name ?: "file")}\"")
+            call.response.header(HttpHeaders.ContentType, mimeType.toString())
+            streamInputWithRange(call, input, doc.length(), ip, username, reqPath)
+        } else {
+            val root = File(config.rootDirectoryPath)
+            val target = PathValidator.canonicalizeUnderRoot(root, reqPath).getOrNull() ?: run {
+                call.respond(HttpStatusCode.Forbidden, "Path traversal blocked")
+                return
+            }
+            if (!target.exists() || !target.isFile) {
+                call.respond(HttpStatusCode.NotFound, "File not found")
+                return
+            }
+            val ext = target.extension.lowercase()
+            val mimeType = resolveMimeType(ext)
+            call.response.header(HttpHeaders.ContentDisposition, "inline; filename=\"${PathValidator.sanitizeFileName(target.name)}\"")
+            call.response.header(HttpHeaders.ContentType, mimeType.toString())
+            recordClientActivity(ip, username, "TLS PREVIEW", reqPath, target.length())
+            call.respondFile(target)
+        }
+    }
+
+    private suspend fun serveZipDownload(call: ApplicationCall, config: ServerConfig, username: String, paths: List<String>) {
+        val ip = clientIp(call)
+        val root = File(config.rootDirectoryPath)
+        val tempDir = context?.cacheDir ?: File(System.getProperty("java.io.tmpdir") ?: ".")
+        val tempZip = File.createTempFile("portly_export_", ".zip", tempDir)
+        try {
+            java.util.zip.ZipOutputStream(tempZip.outputStream().buffered(ChecksumUtils.STREAM_BUFFER_SIZE)).use { zos ->
+                for (p in paths) {
+                    val file = PathValidator.canonicalizeUnderRoot(root, p).getOrNull() ?: continue
+                    if (!file.exists()) continue
+                    addEntryToZip(zos, file, file.name)
+                }
+            }
+            call.response.header(HttpHeaders.ContentDisposition, "attachment; filename=\"portly_download.zip\"")
+            recordClientActivity(ip, username, "TLS ZIP_DOWNLOAD", paths.joinToString(","), tempZip.length())
+            call.respondFile(tempZip)
+        } finally {
+            tempZip.delete()
+        }
+    }
+
+    private fun addEntryToZip(zos: java.util.zip.ZipOutputStream, file: File, relPath: String) {
+        if (file.isDirectory) {
+            val children = file.listFiles() ?: emptyArray()
+            if (children.isEmpty()) {
+                zos.putNextEntry(java.util.zip.ZipEntry("$relPath/"))
+                zos.closeEntry()
+            } else {
+                for (c in children) {
+                    addEntryToZip(zos, c, "$relPath/${c.name}")
+                }
+            }
+        } else {
+            zos.putNextEntry(java.util.zip.ZipEntry(relPath))
+            file.inputStream().buffered(ChecksumUtils.STREAM_BUFFER_SIZE).use { it.copyTo(zos) }
+            zos.closeEntry()
+        }
+    }
+
+    private fun resolveMimeType(ext: String): ContentType = when (ext) {
+        "jpg", "jpeg" -> ContentType.Image.JPEG
+        "png" -> ContentType.Image.PNG
+        "gif" -> ContentType.Image.GIF
+        "webp" -> ContentType.parse("image/webp")
+        "svg" -> ContentType.Image.SVG
+        "bmp" -> ContentType.parse("image/bmp")
+        "mp4" -> ContentType.Video.MP4
+        "webm" -> ContentType.parse("video/webm")
+        "mkv" -> ContentType.parse("video/x-matroska")
+        "mp3" -> ContentType.Audio.MPEG
+        "wav" -> ContentType.parse("audio/wav")
+        "ogg" -> ContentType.Audio.OGG
+        "m4a", "aac" -> ContentType.parse("audio/mp4")
+        "flac" -> ContentType.parse("audio/flac")
+        "pdf" -> ContentType.parse("application/pdf")
+        "txt", "log", "md" -> ContentType.Text.Plain
+        "json" -> ContentType.Application.Json
+        "xml" -> ContentType.Text.Xml
+        "html", "htm" -> ContentType.Text.Html
+        "css" -> ContentType.Text.CSS
+        "js" -> ContentType.parse("text/javascript")
+        "py", "kt", "java", "sh", "yml", "yaml" -> ContentType.Text.Plain
+        else -> ContentType.Application.OctetStream
     }
 
     private fun resolveSafDoc(ctx: Context, rootUri: Uri, virtualPath: String): DocumentFile? {
