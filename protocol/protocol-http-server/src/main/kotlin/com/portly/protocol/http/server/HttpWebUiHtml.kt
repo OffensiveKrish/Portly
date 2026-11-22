@@ -66,12 +66,41 @@ internal object HttpWebUiHtml {
             --danger-bg: rgba(239, 68, 68, 0.12);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
+        .ambient-brand-glow {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
             background-color: var(--bg-base);
             background-image: 
-                radial-gradient(circle at 85% 15%, rgba(255, 84, 107, 0.15) 0%, transparent 45%),
-                radial-gradient(circle at 15% 85%, rgba(255, 168, 128, 0.12) 0%, transparent 45%);
-            background-attachment: fixed;
+                radial-gradient(circle 900px at 10% 12%, rgba(255, 84, 107, 0.14) 0%, transparent 60%),
+                radial-gradient(circle 850px at 90% 14%, rgba(255, 130, 119, 0.12) 0%, transparent 60%),
+                radial-gradient(circle 1000px at 50% 65%, rgba(255, 107, 74, 0.08) 0%, transparent 65%),
+                radial-gradient(circle 750px at 85% 90%, rgba(255, 209, 139, 0.07) 0%, transparent 60%);
+        }
+        .ambient-brand-glow::before {
+            content: "";
+            position: absolute;
+            top: -15%;
+            left: -10%;
+            width: 65vw;
+            height: 65vw;
+            border-radius: 9999px;
+            background: radial-gradient(circle, rgba(255, 84, 107, 0.16) 0%, rgba(255, 130, 119, 0.08) 50%, transparent 70%);
+            filter: blur(100px);
+        }
+        [data-theme="light"] .ambient-brand-glow {
+            background-color: #F8FAFC;
+            background-image: 
+                radial-gradient(circle 900px at 10% 12%, rgba(255, 84, 107, 0.10) 0%, transparent 60%),
+                radial-gradient(circle 850px at 90% 14%, rgba(255, 130, 119, 0.08) 0%, transparent 60%),
+                radial-gradient(circle 1000px at 50% 65%, rgba(255, 168, 128, 0.06) 0%, transparent 65%),
+                radial-gradient(circle 750px at 85% 90%, rgba(255, 209, 139, 0.05) 0%, transparent 60%),
+                linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 50%, #F8FAFC 100%);
+        }
+        body {
+            background-color: var(--bg-base);
             color: var(--text-primary);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
             min-height: 100vh;
@@ -79,6 +108,7 @@ internal object HttpWebUiHtml {
             align-items: center;
             justify-content: center;
             padding: 24px 16px;
+            position: relative;
         }
         .login-card {
             width: 100%;
@@ -269,7 +299,8 @@ internal object HttpWebUiHtml {
     </style>
 </head>
 <body>
-    <div class="login-card">
+    <div class="ambient-brand-glow" aria-hidden="true"></div>
+    <div class="login-card" style="position:relative; z-index:1;">
         <button type="button" class="theme-toggle-top" onclick="toggleTheme()">
             <span id="themeToggleText">Light</span>
         </button>
@@ -421,18 +452,48 @@ internal object HttpWebUiHtml {
             --danger-bg: rgba(239, 68, 68, 0.12);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
+        .ambient-brand-glow {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
             background-color: var(--bg-base);
             background-image: 
-                radial-gradient(circle at 90% 12%, rgba(255, 84, 107, 0.12) 0%, transparent 40%),
-                radial-gradient(circle at 10% 88%, rgba(255, 168, 128, 0.10) 0%, transparent 45%);
-            background-attachment: fixed;
+                radial-gradient(circle 900px at 10% 12%, rgba(255, 84, 107, 0.14) 0%, transparent 60%),
+                radial-gradient(circle 850px at 90% 14%, rgba(255, 130, 119, 0.12) 0%, transparent 60%),
+                radial-gradient(circle 1000px at 50% 65%, rgba(255, 107, 74, 0.08) 0%, transparent 65%),
+                radial-gradient(circle 750px at 85% 90%, rgba(255, 209, 139, 0.07) 0%, transparent 60%);
+        }
+        .ambient-brand-glow::before {
+            content: "";
+            position: absolute;
+            top: -15%;
+            left: -10%;
+            width: 65vw;
+            height: 65vw;
+            border-radius: 9999px;
+            background: radial-gradient(circle, rgba(255, 84, 107, 0.16) 0%, rgba(255, 130, 119, 0.08) 50%, transparent 70%);
+            filter: blur(100px);
+        }
+        [data-theme="light"] .ambient-brand-glow {
+            background-color: #F8FAFC;
+            background-image: 
+                radial-gradient(circle 900px at 10% 12%, rgba(255, 84, 107, 0.10) 0%, transparent 60%),
+                radial-gradient(circle 850px at 90% 14%, rgba(255, 130, 119, 0.08) 0%, transparent 60%),
+                radial-gradient(circle 1000px at 50% 65%, rgba(255, 168, 128, 0.06) 0%, transparent 65%),
+                radial-gradient(circle 750px at 85% 90%, rgba(255, 209, 139, 0.05) 0%, transparent 60%),
+                linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 50%, #F8FAFC 100%);
+        }
+        body {
+            background-color: var(--bg-base);
             color: var(--text-primary);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, "Helvetica Neue", sans-serif;
             font-size: 13px;
             line-height: 1.5;
             min-height: 100vh;
             display: flex;
+            position: relative;
         }
         a { color: inherit; text-decoration: none; }
 
@@ -1137,6 +1198,7 @@ internal object HttpWebUiHtml {
     </style>
 </head>
 <body>
+    <div class="ambient-brand-glow" aria-hidden="true"></div>
     <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand" onclick="navigateTo('/')">
