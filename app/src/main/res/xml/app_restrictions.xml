@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<restrictions xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <restriction
+        android:key="disable_plain_ftp"
+        android:title="@string/restriction_disable_plain_ftp_title"
+        android:description="@string/restriction_disable_plain_ftp_desc"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="disable_smb1_legacy"
+        android:title="@string/restriction_disable_smb1_title"
+        android:description="@string/restriction_disable_smb1_desc"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="allow_public_server_bind"
+        android:title="@string/restriction_allow_public_bind_title"
+        android:description="@string/restriction_allow_public_bind_desc"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="require_biometric_lock"
+        android:title="@string/restriction_require_biometric_title"
+        android:description="@string/restriction_require_biometric_desc"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="disable_servers"
+        android:title="@string/restriction_disable_servers_title"
+        android:description="@string/restriction_disable_servers_desc"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="diagnostic_logging_enabled"
+        android:title="@string/restriction_diagnostic_logging_title"
+        android:description="@string/restriction_diagnostic_logging_desc"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+</restrictions>

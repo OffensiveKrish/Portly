@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Portly</string>
+    <string name="restriction_disable_plain_ftp_title">Disallow unencrypted FTP</string>
+    <string name="restriction_disable_plain_ftp_desc">Blocks starting plain FTP servers when enforced by MDM policy.</string>
+    <string name="restriction_disable_smb1_title">Disallow SMB1 legacy protocol</string>
+    <string name="restriction_disable_smb1_desc">Forces SMB 2.02–3.1.1 only across all SMB client profiles.</string>
+    <string name="restriction_allow_public_bind_title">Allow non-LAN server binding</string>
+    <string name="restriction_allow_public_bind_desc">When false, local servers remain restricted to LAN and loopback interfaces.</string>
+    <string name="restriction_require_biometric_title">Require biometric/credential lock</string>
+    <string name="restriction_require_biometric_desc">Enforces biometric or device lock authentication on supported devices.</string>
+    <string name="restriction_disable_servers_title">Disable on-device file servers</string>
+    <string name="restriction_disable_servers_desc">Prevents starting FTP, FTPS, HTTP, or HTTPS servers on managed devices.</string>
+    <string name="restriction_diagnostic_logging_title">Audit and diagnostic logging</string>
+    <string name="restriction_diagnostic_logging_desc">Sets the managed default for operational audit logging.</string>
+</resources>

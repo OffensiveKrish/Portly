@@ -1,0 +1,910 @@
+package com.portly.protocol.https.server
+
+import android.content.Context
+import android.net.Uri
+import androidx.documentfile.provider.DocumentFile
+import com.portly.core.common.ChecksumUtils
+import com.portly.core.common.Formatters
+import com.portly.core.common.PathValidator
+import com.portly.core.common.ProtocolException
+import com.portly.core.database.CredentialVault
+import com.portly.core.model.ConnectedClientInfo
+import com.portly.core.model.LogLevel
+import com.portly.core.model.ProtocolError
+import com.portly.core.model.ProtocolServer
+import com.portly.core.model.ResolvedCredentials
+import com.portly.core.model.ServerConfig
+import com.portly.core.model.ServerLogEntry
+import com.portly.core.model.ServerPermission
+import com.portly.core.model.ServerRuntimeState
+import com.portly.core.model.ServerStatus
+import com.portly.core.model.ServerType
+import com.portly.core.model.TlsVersionPolicy
+import com.portly.core.security.CertificateManager
+import com.portly.core.security.LogRedactor
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.PartData
+import io.ktor.http.content.forEachPart
+import io.ktor.server.application.ApplicationCall
+import io.ktor.server.application.install
+import io.ktor.server.cio.CIO
+import io.ktor.server.cio.CIOApplicationEngine
+import io.ktor.server.engine.EmbeddedServer
+import io.ktor.server.engine.connector
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.plugins.autohead.AutoHeadResponse
+import io.ktor.server.plugins.partialcontent.PartialContent
+import io.ktor.server.request.receiveMultipart
+import io.ktor.server.request.receiveParameters
+import io.ktor.server.request.receiveText
+import io.ktor.server.response.header
+import io.ktor.server.response.respond
+import io.ktor.server.response.respondBytes
+import io.ktor.server.response.respondBytesWriter
+import io.ktor.server.response.respondFile
+import io.ktor.server.response.respondRedirect
+import io.ktor.server.response.respondText
+import io.ktor.server.routing.get
+import io.ktor.server.routing.post
+import io.ktor.server.routing.routing
+import io.ktor.utils.io.jvm.javaio.copyTo
+import io.ktor.utils.io.writeFully
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import java.io.File
+import java.io.InputStream
+import java.net.InetAddress
+import java.net.Socket
+import java.security.MessageDigest
+import java.security.SecureRandom
+import java.util.Base64
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
+import javax.net.ssl.SSLServerSocket
+import javax.net.ssl.SSLSocket
+
+@Serializable
+internal data class HttpsFileEntryDto(
+    val name: String,
+    val path: String,
+    val isDirectory: Boolean,
+    val sizeBytes: Long,
+    val sizeFormatted: String,
+    val modifiedMillis: Long,
+    val modifiedFormatted: String,
+)
+
+@Serializable
+internal data class HttpsListResponse(
+    val path: String,
+    val entries: List<HttpsFileEntryDto>,
+)
+
+@Serializable
+internal data class HttpsMkdirReq(val parentPath: String, val name: String)
+
+@Serializable
+internal data class HttpsRenameReq(val path: String, val newName: String)
+
+@Serializable
+internal data class HttpsDeleteReq(val path: String)
+
+private data class HttpsSessionRecord(
+    val token: String,
+    val username: String,
+    val clientIp: String,
+    val expiresAtMillis: Long,
+)
+
+private data class HttpsRateLimit(
+    val failures: Int = 0,
+    val lockedUntilMillis: Long = 0L,
+)
+
+internal class KtorHttpsProtocolServer(
+    private val context: Context?,
+    private val credentialVault: CredentialVault?,
+    private val certificateManager: CertificateManager,
+    private val passwordResolver: (suspend (ServerConfig) -> Map<String, String>)? = null,
+    private val keystoreFileOverride: File? = null,
+) : ProtocolServer {
+
+    override val serverType: ServerType = ServerType.HTTPS
+
+    private val _state = MutableStateFlow(ServerRuntimeState(serverType = ServerType.HTTPS))
+    override val state: StateFlow<ServerRuntimeState> = _state.asStateFlow()
+
+    private val _clients = MutableStateFlow<List<ConnectedClientInfo>>(emptyList())
+    override val clients: StateFlow<List<ConnectedClientInfo>> = _clients.asStateFlow()
+
+    private val _logs = MutableStateFlow<List<ServerLogEntry>>(emptyList())
+    override val logs: StateFlow<List<ServerLogEntry>> = _logs.asStateFlow()
+
+    private var embedded: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
+    private var tlsServerSocket: SSLServerSocket? = null
+    private var bridgeExecutor: ExecutorService? = null
+    private val bridgeRunning = AtomicBoolean(false)
+    private val activeSockets = ConcurrentHashMap<String, MutableList<Socket>>()
+
+    private var currentConfig: ServerConfig? = null
+    private var localAddresses: List<String> = listOf("127.0.0.1")
+    private val sessions = ConcurrentHashMap<String, HttpsSessionRecord>()
+    private val kickedIps = ConcurrentHashMap.newKeySet<String>()
+    private val loginFailuresByIp = ConcurrentHashMap<String, HttpsRateLimit>()
+    private val activeClients = ConcurrentHashMap<String, ConnectedClientInfo>()
+    private val totalBytesServed = AtomicLong(0L)
+    private val json = Json { ignoreUnknownKeys = true }
+
+    var activeCertFingerprintSha256: String? = null
+        private set
+
+    override suspend fun start(config: ServerConfig): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            stopInternal(userStopped = false)
+            _state.value = ServerRuntimeState(
+                serverType = ServerType.HTTPS,
+                status = ServerStatus.STARTING,
+                port = config.port,
+            )
+
+            val ksPassword = resolveKeystorePassword()
+            val ksFile = if (keystoreFileOverride != null) {
+                keystoreFileOverride
+            } else {
+                val gen = certificateManager.generateOrLoadServerKeystore(
+                    serverName = "https",
+                    sanIpAddresses = localAddresses,
+                    keystorePassword = ksPassword,
+                )
+                activeCertFingerprintSha256 = gen.sha256Fingerprint
+                gen.keystoreFile
+            }
+            val sslContext = certificateManager.createSslContextFromPkcs12(ksFile, ksPassword)
+
+            val passwords = resolvePasswords(config)
+
+            // Bind internal Ktor CIO server strictly on loopback ephemeral port.
+            val ktorServer = embeddedServer(CIO, configure = {
+                connector {
+                    host = "127.0.0.1"
+                    port = 0
+                }
+            }) {
+                install(AutoHeadResponse)
+                install(PartialContent)
+
+                routing {
+                    val handleLoginGet: suspend (ApplicationCall) -> Unit = { c ->
+                        val ip = clientIp(c)
+                        val lockRemaining = remainingLockoutSeconds(ip)
+                        c.respondText(
+                            HttpsWebUiHtml.loginPage(lockedOutSeconds = lockRemaining),
+                            ContentType.Text.Html,
+                        )
+                    }
+
+                    val handleLoginPost: suspend (ApplicationCall) -> Unit = { c ->
+                        val ip = clientIp(c)
+                        val lockRemaining = remainingLockoutSeconds(ip)
+                        if (lockRemaining > 0L) {
+                            c.response.header(HttpHeaders.RetryAfter, lockRemaining.toString())
+                            c.respondText(
+                                HttpsWebUiHtml.loginPage(lockedOutSeconds = lockRemaining),
+                                ContentType.Text.Html,
+                                HttpStatusCode.TooManyRequests,
+                            )
+                        } else {
+                            val params = c.receiveParameters()
+                            val user = params["username"]?.trim().orEmpty()
+                            val pass = params["password"].orEmpty()
+                            if (authenticateUser(config, passwords, user, pass)) {
+                                loginFailuresByIp.remove(ip)
+                                kickedIps.remove(ip)
+                                val token = newSessionToken()
+                                sessions[token] = HttpsSessionRecord(
+                                    token = token,
+                                    username = user,
+                                    clientIp = ip,
+                                    expiresAtMillis = System.currentTimeMillis() + SESSION_TTL_MS,
+                                )
+                                c.response.header(
+                                    HttpHeaders.SetCookie,
+                                    "$COOKIE_NAME=$token; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${SESSION_TTL_MS / 1000}",
+                                )
+                                recordClientActivity(ip, user, "TLS LOGIN", null, 0L)
+                                appendLog(LogLevel.INFO, "HTTPS login succeeded for $user from $ip", config)
+                                c.respondRedirect("/")
+                            } else {
+                                val prev = loginFailuresByIp[ip] ?: HttpsRateLimit()
+                                val nextFailures = prev.failures + 1
+                                val lockedUntil = if (nextFailures >= 5) System.currentTimeMillis() + 30_000L else 0L
+                                loginFailuresByIp[ip] = HttpsRateLimit(
+                                    failures = if (nextFailures >= 5) 0 else nextFailures,
+                                    lockedUntilMillis = lockedUntil,
+                                )
+                                appendLog(LogLevel.WARN, "Failed HTTPS login attempt for $user from $ip", config)
+                                if (lockedUntil > 0L) {
+                                    c.response.header(HttpHeaders.RetryAfter, "30")
+                                    c.respondText(
+                                        HttpsWebUiHtml.loginPage(lockedOutSeconds = 30),
+                                        ContentType.Text.Html,
+                                        HttpStatusCode.TooManyRequests,
+                                    )
+                                } else {
+                                    c.respondText(
+                                        HttpsWebUiHtml.loginPage(errorMessage = "Invalid username or password."),
+                                        ContentType.Text.Html,
+                                        HttpStatusCode.Unauthorized,
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    get("/login") { handleLoginGet(call) }
+                    get("/Web/Account/Login.htm") { handleLoginGet(call) }
+                    post("/login") { handleLoginPost(call) }
+                    post("/Web/Account/Login.htm") { handleLoginPost(call) }
+                    get("/Web/Shared/forms.css") {
+                        call.respondText(HttpsWebUiHtml.FORMS_CSS, ContentType.parse("text/css"))
+                    }
+                    get("/Web/Shared/images/gs-atom-logo.png") {
+                        call.respondBytes(HttpsWebUiHtml.LOGO_PNG_BYTES, ContentType.parse("image/png"))
+                    }
+
+                    post("/logout") {
+                        call.request.cookies[COOKIE_NAME]?.let { sessions.remove(it) }
+                        call.response.header(
+                            HttpHeaders.SetCookie,
+                            "$COOKIE_NAME=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
+                        )
+                        call.respondRedirect("/Web/Account/Login.htm")
+                    }
+
+                    get("/") {
+                        val user = authorizeOrChallenge(call, config, passwords, redirectToLogin = true) ?: return@get
+                        recordClientActivity(clientIp(call), user, "TLS BROWSE", "/", 0L)
+                        call.respondText(
+                            browserHtml("/", config.readOnly, config.requireAuth, user),
+                            ContentType.Text.Html,
+                        )
+                    }
+
+                    get("/api/list") {
+                        val user = authorizeOrChallenge(call, config, passwords, redirectToLogin = false) ?: return@get
+                        if (!hasPermission(config, user, ServerPermission.READ)) {
+                            call.respond(HttpStatusCode.Forbidden, "Read permission denied")
+                            return@get
+                        }
+                        val reqPath = call.request.queryParameters["path"] ?: "/"
+                        val entries = listDirectory(config, reqPath) ?: run {
+                            call.respond(HttpStatusCode.Forbidden, "Unsafe path")
+                            return@get
+                        }
+                        call.respondText(
+                            json.encodeToString(HttpsListResponse(PathValidator.normalizeRemotePath(reqPath), entries)),
+                            ContentType.Application.Json,
+                        )
+                    }
+
+                    get("/api/search") {
+                        val user = authorizeOrChallenge(call, config, passwords, redirectToLogin = false) ?: return@get
+                        if (!hasPermission(config, user, ServerPermission.READ)) {
+                            call.respond(HttpStatusCode.Forbidden, "Read permission denied")
+                            return@get
+                        }
+                        val reqPath = call.request.queryParameters["path"] ?: "/"
+                        val q = call.request.queryParameters["q"]?.trim().orEmpty()
+                        val entries = searchDirectory(config, reqPath, q) ?: run {
+                            call.respond(HttpStatusCode.Forbidden, "Unsafe path")
+                            return@get
+                        }
+                        call.respondText(
+                            json.encodeToString(HttpsListResponse(PathValidator.normalizeRemotePath(reqPath), entries)),
+                            ContentType.Application.Json,
+                        )
+                    }
+
+                    get("/download") {
+                        val user = authorizeOrChallenge(call, config, passwords, redirectToLogin = true) ?: return@get
+                        if (!hasPermission(config, user, ServerPermission.READ)) {
+                            call.respond(HttpStatusCode.Forbidden, "Read permission denied")
+                            return@get
+                        }
+                        val reqPath = call.request.queryParameters["path"] ?: ""
+                        serveFileDownload(call, config, user, reqPath)
+                    }
+
+                    post("/api/upload") {
+                        val user = authorizeOrChallenge(call, config, passwords, redirectToLogin = false) ?: return@post
+                        if (config.readOnly || !hasPermission(config, user, ServerPermission.WRITE)) {
+                            call.respond(HttpStatusCode.Forbidden, "Write permission denied")
+                            return@post
+                        }
+                        val dirPath = call.request.queryParameters["path"] ?: "/"
+                        handleUpload(call, config, user, dirPath)
+                    }
+
+                    post("/api/mkdir") {
+                        val user = authorizeOrChallenge(call, config, passwords, redirectToLogin = false) ?: return@post
+                        if (config.readOnly || !hasPermission(config, user, ServerPermission.MKDIR)) {
+                            call.respond(HttpStatusCode.Forbidden, "Mkdir permission denied")
+                            return@post
+                        }
+                        val body = json.decodeFromString<HttpsMkdirReq>(call.receiveText())
+                        if (createFolder(config, body.parentPath, body.name)) call.respond(HttpStatusCode.OK, "Created")
+                        else call.respond(HttpStatusCode.Forbidden, "Rejected")
+                    }
+
+                    post("/api/rename") {
+                        val user = authorizeOrChallenge(call, config, passwords, redirectToLogin = false) ?: return@post
+                        if (config.readOnly || !hasPermission(config, user, ServerPermission.WRITE)) {
+                            call.respond(HttpStatusCode.Forbidden, "Write permission denied")
+                            return@post
+                        }
+                        val body = json.decodeFromString<HttpsRenameReq>(call.receiveText())
+                        if (renameItem(config, body.path, body.newName)) call.respond(HttpStatusCode.OK, "Renamed")
+                        else call.respond(HttpStatusCode.Forbidden, "Rejected")
+                    }
+
+                    post("/api/delete") {
+                        val user = authorizeOrChallenge(call, config, passwords, redirectToLogin = false) ?: return@post
+                        if (config.readOnly || !hasPermission(config, user, ServerPermission.DELETE)) {
+                            call.respond(HttpStatusCode.Forbidden, "Delete permission denied")
+                            return@post
+                        }
+                        val body = json.decodeFromString<HttpsDeleteReq>(call.receiveText())
+                        if (deleteItem(config, body.path)) call.respond(HttpStatusCode.OK, "Deleted")
+                        else call.respond(HttpStatusCode.Forbidden, "Rejected")
+                    }
+                }
+            }
+
+            ktorServer.start(wait = false)
+            val backendPort = ktorServer.engine.resolvedConnectors().first().port
+
+            val bindAddr = InetAddress.getByName("0.0.0.0")
+            val sslServer = (sslContext.serverSocketFactory.createServerSocket(config.port, 50, bindAddr) as SSLServerSocket).apply {
+                enabledProtocols = when (config.tlsVersionPolicy) {
+                    TlsVersionPolicy.TLS_1_3_ONLY -> arrayOf("TLSv1.3")
+                    TlsVersionPolicy.TLS_1_2_OR_1_3 -> arrayOf("TLSv1.3", "TLSv1.2")
+                }
+            }
+            val externalPort = sslServer.localPort
+
+            val exec = Executors.newCachedThreadPool()
+            bridgeRunning.set(true)
+            exec.submit {
+                while (bridgeRunning.get() && !sslServer.isClosed) {
+                    val clientSock = runCatching { sslServer.accept() as SSLSocket }.getOrNull() ?: break
+                    val remoteInet = clientSock.inetAddress
+                    val remoteIp = remoteInet.hostAddress ?: "unknown"
+                    val lanAllowed = !config.lanOnlyBind || config.allowPublicBindOptIn || isLanOrLoopback(remoteInet)
+                    if (!lanAllowed ||
+                        remoteIp in kickedIps ||
+                        (activeSockets[remoteIp]?.size ?: 0) >= config.maxConnectionsPerIp
+                    ) {
+                        runCatching { clientSock.close() }
+                        continue
+                    }
+                    exec.submit {
+                        relayTlsConnection(clientSock, backendPort, remoteIp)
+                    }
+                }
+            }
+
+            embedded = ktorServer
+            tlsServerSocket = sslServer
+            bridgeExecutor = exec
+            currentConfig = config.copy(port = externalPort)
+            totalBytesServed.set(0L)
+
+            appendLog(LogLevel.INFO, "HTTPS server started on ${bindAddr.hostAddress}:$externalPort", config)
+            _state.value = ServerRuntimeState(
+                serverType = ServerType.HTTPS,
+                status = ServerStatus.RUNNING,
+                port = externalPort,
+                activeUrls = buildUrls(externalPort),
+                activeClientCount = 0,
+                totalBytesServed = 0L,
+                startedAtMillis = System.currentTimeMillis(),
+                userStoppedExplicitly = false,
+            )
+            Unit
+        }.onFailure { err ->
+            appendLog(LogLevel.ERROR, "Failed to start HTTPS server: ${err.message}", config)
+            _state.value = ServerRuntimeState(
+                serverType = ServerType.HTTPS,
+                status = ServerStatus.ERROR,
+                port = config.port,
+                lastError = ProtocolError.ProtocolFailure(
+                    userMessage = "Could not start HTTPS server on port ${config.port}.",
+                    nextStep = "Check port availability and TLS keystore setup.",
+                    technicalDetail = err.message,
+                ),
+            )
+        }
+    }
+
+    private fun relayTlsConnection(clientSock: SSLSocket, backendPort: Int, remoteIp: String) {
+        val list = activeSockets.computeIfAbsent(remoteIp) { java.util.Collections.synchronizedList(mutableListOf()) }
+        list.add(clientSock)
+        var backendSock: Socket? = null
+        try {
+            clientSock.startHandshake()
+            backendSock = Socket("127.0.0.1", backendPort)
+            val cIn = clientSock.inputStream
+            val cOut = clientSock.outputStream
+            val bIn = backendSock.getInputStream()
+            val bOut = backendSock.getOutputStream()
+
+            val upstream = Thread {
+                runCatching {
+                    val buf = ByteArray(ChecksumUtils.STREAM_BUFFER_SIZE)
+                    while (true) {
+                        val r = cIn.read(buf)
+                        if (r <= 0) break
+                        bOut.write(buf, 0, r)
+                        bOut.flush()
+                    }
+                    backendSock.shutdownOutput()
+                }
+            }
+            upstream.start()
+            val buf = ByteArray(ChecksumUtils.STREAM_BUFFER_SIZE)
+            while (true) {
+                val r = bIn.read(buf)
+                if (r <= 0) break
+                cOut.write(buf, 0, r)
+                cOut.flush()
+            }
+            upstream.join(2000)
+        } catch (err: Throwable) {
+            appendLog(LogLevel.WARN, "HTTPS connection/TLS error from $remoteIp: ${err.message}", currentConfig)
+        } finally {
+            list.remove(clientSock)
+            runCatching { clientSock.close() }
+            runCatching { backendSock?.close() }
+        }
+    }
+
+    suspend fun renewCertificate(): Result<String> = withContext(Dispatchers.IO) {
+        runCatching {
+            val pw = resolveKeystorePassword()
+            val gen = certificateManager.generateOrLoadServerKeystore(
+                serverName = "https",
+                sanIpAddresses = localAddresses,
+                keystorePassword = pw,
+                forceRegenerate = true,
+            )
+            activeCertFingerprintSha256 = gen.sha256Fingerprint
+            gen.sha256Fingerprint
+        }
+    }
+
+    override suspend fun stop() = withContext(Dispatchers.IO) {
+        stopInternal(userStopped = true)
+    }
+
+    private fun stopInternal(userStopped: Boolean) {
+        bridgeRunning.set(false)
+        runCatching { tlsServerSocket?.close() }
+        tlsServerSocket = null
+        activeSockets.values.flatten().forEach { runCatching { it.close() } }
+        activeSockets.clear()
+        runCatching { bridgeExecutor?.shutdownNow() }
+        bridgeExecutor = null
+        val srv = embedded
+        embedded = null
+        sessions.clear()
+        activeClients.clear()
+        _clients.value = emptyList()
+        if (srv != null) {
+            runCatching { srv.stop(300L, 1_000L) }
+            appendLog(LogLevel.INFO, "HTTPS server stopped", currentConfig)
+        }
+        _state.update {
+            it.copy(
+                status = ServerStatus.STOPPED,
+                activeUrls = emptyList(),
+                activeClientCount = 0,
+                userStoppedExplicitly = userStopped,
+            )
+        }
+    }
+
+    override suspend fun kickClient(clientId: String): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            val client = activeClients.remove(clientId)
+                ?: throw ProtocolException(ProtocolError.PathNotFound("Client not active"))
+            kickedIps.add(client.remoteAddress)
+            sessions.entries.removeIf { it.value.clientIp == client.remoteAddress }
+            activeSockets.remove(client.remoteAddress)?.forEach { runCatching { it.close() } }
+            _clients.value = activeClients.values.toList()
+            _state.update { it.copy(activeClientCount = activeClients.size) }
+            appendLog(LogLevel.WARN, "Kicked HTTPS client ${client.remoteAddress}", currentConfig)
+            Unit
+        }
+    }
+
+    override fun updateLocalAddresses(addresses: List<String>) {
+        localAddresses = addresses.ifEmpty { listOf("127.0.0.1") }
+        _state.update { current ->
+            if (current.status == ServerStatus.RUNNING) current.copy(activeUrls = buildUrls(current.port)) else current
+        }
+    }
+
+    private fun clientIp(call: ApplicationCall): String =
+        call.request.local.remoteAddress
+
+    private suspend fun resolveKeystorePassword(): CharArray {
+        if (keystoreFileOverride != null) return "changeit".toCharArray()
+        val vault = credentialVault ?: return "portly_local_https".toCharArray()
+        val loaded = vault.loadCredentials(KEYSTORE_SECRET_REF, "https_keystore")
+        val existing = loaded.password
+        if (!existing.isNullOrEmpty()) return existing.toCharArray()
+        val generatedBytes = ByteArray(24).also { SecureRandom().nextBytes(it) }
+        val generated = Base64.getUrlEncoder().withoutPadding().encodeToString(generatedBytes)
+        vault.saveCredentials(KEYSTORE_SECRET_REF, ResolvedCredentials("https_keystore", generated))
+        return generated.toCharArray()
+    }
+
+    private suspend fun authorizeOrChallenge(
+        call: ApplicationCall,
+        config: ServerConfig,
+        passwords: Map<String, String>,
+        redirectToLogin: Boolean,
+    ): String? {
+        val ip = clientIp(call)
+        if (ip in kickedIps) {
+            call.respond(HttpStatusCode.Forbidden, "Session terminated by host")
+            return null
+        }
+        if (!config.requireAuth) return "anonymous"
+
+        val cookieToken = call.request.cookies[COOKIE_NAME]
+        val session = cookieToken?.let { sessions[it] }
+        if (session != null) {
+            if (session.expiresAtMillis > System.currentTimeMillis()) return session.username
+            sessions.remove(cookieToken)
+        }
+
+        val authHeader = call.request.headers[HttpHeaders.Authorization]
+        if (authHeader != null && authHeader.startsWith("Basic ", ignoreCase = true)) {
+            val decoded = runCatching {
+                String(Base64.getDecoder().decode(authHeader.substring(6).trim()), Charsets.UTF_8)
+            }.getOrNull()
+            val sep = decoded?.indexOf(':') ?: -1
+            if (sep > 0) {
+                val u = decoded!!.substring(0, sep)
+                val p = decoded.substring(sep + 1)
+                if (authenticateUser(config, passwords, u, p)) return u
+            }
+        }
+
+        if (redirectToLogin) call.respondRedirect("/Web/Account/Login.htm")
+        else call.respond(HttpStatusCode.Unauthorized, "Authentication required")
+        return null
+    }
+
+    private fun authenticateUser(
+        config: ServerConfig,
+        passwords: Map<String, String>,
+        username: String,
+        password: String,
+    ): Boolean {
+        val account = config.users.firstOrNull { it.username == username } ?: return false
+        if (account.isAnonymous) return true
+        val expected = passwords[username] ?: return false
+        return MessageDigest.isEqual(expected.toByteArray(Charsets.UTF_8), password.toByteArray(Charsets.UTF_8))
+    }
+
+    private fun hasPermission(config: ServerConfig, username: String, perm: ServerPermission): Boolean {
+        if (!config.requireAuth) return perm == ServerPermission.READ || !config.readOnly
+        val acct = config.users.firstOrNull { it.username == username } ?: return false
+        return perm in acct.permissions
+    }
+
+    private fun remainingLockoutSeconds(ip: String): Long {
+        val rec = loginFailuresByIp[ip] ?: return 0L
+        val rem = rec.lockedUntilMillis - System.currentTimeMillis()
+        return if (rem > 0L) ((rem + 999L) / 1000L) else 0L
+    }
+
+    private fun listDirectory(config: ServerConfig, virtualPath: String): List<HttpsFileEntryDto>? {
+        val norm = PathValidator.normalizeRemotePath(virtualPath)
+        val treeUri = config.rootTreeUriString?.takeIf { it.isNotBlank() }?.let(Uri::parse)
+        return if (treeUri != null && context != null) {
+            val dir = resolveSafDoc(context, treeUri, norm) ?: return null
+            if (!dir.isDirectory) return null
+            dir.listFiles().mapNotNull { child ->
+                val name = child.name ?: return@mapNotNull null
+                val size = if (child.isDirectory) 0L else child.length()
+                val mod = child.lastModified()
+                HttpsFileEntryDto(name, PathValidator.joinRemotePath(norm, name), child.isDirectory, size, Formatters.formatBytes(size), mod, Formatters.formatTimestamp(mod))
+            }.sortedWith(compareBy<HttpsFileEntryDto> { !it.isDirectory }.thenBy { it.name.lowercase() })
+        } else {
+            val root = File(config.rootDirectoryPath).apply { mkdirs() }
+            val dir = PathValidator.canonicalizeUnderRoot(root, virtualPath).getOrNull() ?: return null
+            if (!dir.exists() || !dir.isDirectory) return null
+            (dir.listFiles() ?: emptyArray()).map { file ->
+                val size = if (file.isDirectory) 0L else file.length()
+                val mod = file.lastModified()
+                HttpsFileEntryDto(file.name, PathValidator.joinRemotePath(norm, file.name), file.isDirectory, size, Formatters.formatBytes(size), mod, Formatters.formatTimestamp(mod))
+            }.sortedWith(compareBy<HttpsFileEntryDto> { !it.isDirectory }.thenBy { it.name.lowercase() })
+        }
+    }
+
+    private fun searchDirectory(config: ServerConfig, startPath: String, query: String): List<HttpsFileEntryDto>? {
+        if (query.isBlank()) return listDirectory(config, startPath)
+        val q = query.lowercase()
+        val root = File(config.rootDirectoryPath).apply { mkdirs() }
+        val start = PathValidator.canonicalizeUnderRoot(root, startPath).getOrNull() ?: return null
+        val results = mutableListOf<HttpsFileEntryDto>()
+        val queue = ArrayDeque<Pair<File, String>>()
+        queue.addLast(start to PathValidator.normalizeRemotePath(startPath))
+        while (queue.isNotEmpty() && results.size < 200) {
+            val (dir, vPath) = queue.removeFirst()
+            for (child in dir.listFiles() ?: emptyArray()) {
+                val childV = PathValidator.joinRemotePath(vPath, child.name)
+                if (child.name.lowercase().contains(q)) {
+                    val size = if (child.isDirectory) 0L else child.length()
+                    val mod = child.lastModified()
+                    results += HttpsFileEntryDto(child.name, childV, child.isDirectory, size, Formatters.formatBytes(size), mod, Formatters.formatTimestamp(mod))
+                }
+                if (child.isDirectory) queue.addLast(child to childV)
+            }
+        }
+        return results
+    }
+
+    private suspend fun serveFileDownload(call: ApplicationCall, config: ServerConfig, username: String, reqPath: String) {
+        val ip = clientIp(call)
+        val treeUri = config.rootTreeUriString?.takeIf { it.isNotBlank() }?.let(Uri::parse)
+        if (treeUri != null && context != null) {
+            val doc = resolveSafDoc(context, treeUri, reqPath)
+            if (doc == null || !doc.exists() || doc.isDirectory) {
+                call.respond(HttpStatusCode.Forbidden, "Unavailable or unsafe path")
+                return
+            }
+            val input = context.contentResolver.openInputStream(doc.uri) ?: run {
+                call.respond(HttpStatusCode.InternalServerError, "Cannot open file")
+                return
+            }
+            call.response.header(HttpHeaders.ContentDisposition, "attachment; filename=\"${PathValidator.sanitizeFileName(doc.name ?: "file")}\"")
+            streamInputWithRange(call, input, doc.length(), ip, username, reqPath)
+        } else {
+            val root = File(config.rootDirectoryPath)
+            val target = PathValidator.canonicalizeUnderRoot(root, reqPath).getOrNull() ?: run {
+                call.respond(HttpStatusCode.Forbidden, "Path traversal blocked")
+                return
+            }
+            if (!target.exists() || !target.isFile) {
+                call.respond(HttpStatusCode.NotFound, "File not found")
+                return
+            }
+            call.response.header(HttpHeaders.ContentDisposition, "attachment; filename=\"${PathValidator.sanitizeFileName(target.name)}\"")
+            recordClientActivity(ip, username, "TLS DOWNLOAD", reqPath, target.length())
+            call.respondFile(target)
+        }
+    }
+
+    private suspend fun streamInputWithRange(
+        call: ApplicationCall,
+        input: InputStream,
+        totalSize: Long,
+        ip: String,
+        username: String,
+        reqPath: String,
+    ) {
+        input.use { stream ->
+            val rangeHeader = call.request.headers[HttpHeaders.Range]
+            val parsedRange = parseSingleRange(rangeHeader, totalSize)
+            if (parsedRange != null) {
+                val (start, end) = parsedRange
+                val len = (end - start + 1).coerceAtLeast(0L)
+                if (start > 0L) stream.skip(start)
+                call.response.header(HttpHeaders.ContentRange, "bytes $start-$end/$totalSize")
+                call.response.header(HttpHeaders.ContentLength, len.toString())
+                call.respondBytesWriter(status = HttpStatusCode.PartialContent) {
+                    val buf = ByteArray(ChecksumUtils.STREAM_BUFFER_SIZE)
+                    var remaining = len
+                    while (remaining > 0L) {
+                        val read = stream.read(buf, 0, minOf(buf.size.toLong(), remaining).toInt())
+                        if (read <= 0) break
+                        writeFully(buf, 0, read)
+                        remaining -= read
+                    }
+                }
+                recordClientActivity(ip, username, "TLS DOWNLOAD", reqPath, len)
+            } else {
+                call.respondBytesWriter(status = HttpStatusCode.OK) {
+                    val buf = ByteArray(ChecksumUtils.STREAM_BUFFER_SIZE)
+                    var total = 0L
+                    while (true) {
+                        val read = stream.read(buf)
+                        if (read <= 0) break
+                        writeFully(buf, 0, read)
+                        total += read
+                    }
+                    recordClientActivity(ip, username, "TLS DOWNLOAD", reqPath, total)
+                }
+            }
+        }
+    }
+
+    private suspend fun handleUpload(call: ApplicationCall, config: ServerConfig, username: String, dirPath: String) {
+        val ip = clientIp(call)
+        val root = File(config.rootDirectoryPath).apply { mkdirs() }
+        val targetLocalDir = PathValidator.canonicalizeUnderRoot(root, dirPath).getOrNull() ?: run {
+            call.respond(HttpStatusCode.Forbidden, "Unsafe upload directory")
+            return
+        }
+        var uploaded = 0
+        var recipient: String? = null
+        var category: String? = null
+        var remarks: String? = null
+        call.receiveMultipart().forEachPart { part ->
+            when (part) {
+                is PartData.FormItem -> {
+                    when (part.name) {
+                        "recipient" -> recipient = part.value.takeIf { it.isNotBlank() }
+                        "category" -> category = part.value.takeIf { it.isNotBlank() }
+                        "remarks" -> remarks = part.value.takeIf { it.isNotBlank() }
+                    }
+                }
+                is PartData.FileItem -> {
+                    val safeName = PathValidator.sanitizeFileName(part.originalFileName ?: "upload.bin")
+                    val destFile = PathValidator.canonicalizeUnderRoot(targetLocalDir, safeName).getOrNull()
+                    if (destFile != null) {
+                        destFile.parentFile?.mkdirs()
+                        var bytes = 0L
+                        destFile.outputStream().buffered(ChecksumUtils.STREAM_BUFFER_SIZE).use { out ->
+                            bytes = part.provider().copyTo(out)
+                        }
+                        uploaded++
+                        recordClientActivity(ip, username, "TLS UPLOAD", "$dirPath/$safeName", bytes)
+                    }
+                }
+                else -> Unit
+            }
+            part.dispose()
+        }
+        val details = buildList {
+            recipient?.let { add("Recipient: $it") }
+            category?.let { add("Category: $it") }
+            remarks?.let { add("Remarks: $it") }
+        }.takeIf { it.isNotEmpty() }?.joinToString(", ", prefix = " (", postfix = ")") ?: ""
+        appendLog(LogLevel.INFO, "$username uploaded $uploaded file(s) to $dirPath$details", config)
+        call.respond(HttpStatusCode.OK, "Uploaded $uploaded file(s)")
+    }
+
+    private fun createFolder(config: ServerConfig, parentPath: String, name: String): Boolean {
+        val root = File(config.rootDirectoryPath).apply { mkdirs() }
+        val parent = PathValidator.canonicalizeUnderRoot(root, parentPath).getOrNull() ?: return false
+        val target = PathValidator.canonicalizeUnderRoot(parent, PathValidator.sanitizeFileName(name)).getOrNull() ?: return false
+        return target.mkdirs() || target.isDirectory
+    }
+
+    private fun renameItem(config: ServerConfig, path: String, newName: String): Boolean {
+        val root = File(config.rootDirectoryPath)
+        val src = PathValidator.canonicalizeUnderRoot(root, path).getOrNull() ?: return false
+        if (src == root.canonicalFile) return false
+        val dest = File(src.parentFile, PathValidator.sanitizeFileName(newName))
+        PathValidator.canonicalizeUnderRoot(root, dest.relativeTo(root.canonicalFile).path).getOrNull() ?: return false
+        return src.renameTo(dest)
+    }
+
+    private fun deleteItem(config: ServerConfig, path: String): Boolean {
+        val root = File(config.rootDirectoryPath)
+        val target = PathValidator.canonicalizeUnderRoot(root, path).getOrNull() ?: return false
+        if (target == root.canonicalFile) return false
+        return target.deleteRecursively()
+    }
+
+    private fun resolveSafDoc(ctx: Context, rootUri: Uri, virtualPath: String): DocumentFile? {
+        if (virtualPath.contains("..") || virtualPath.contains('\u0000')) return null
+        var cur = DocumentFile.fromTreeUri(ctx, rootUri) ?: return null
+        val norm = PathValidator.normalizeRemotePath(virtualPath)
+        if (norm == "/") return cur
+        for (seg in norm.trimStart('/').split('/')) {
+            if (seg.isEmpty()) continue
+            cur = cur.findFile(seg) ?: return null
+        }
+        return cur
+    }
+
+    private fun parseSingleRange(header: String?, totalSize: Long): Pair<Long, Long>? {
+        if (header == null || !header.startsWith("bytes=") || totalSize <= 0L) return null
+        val parts = header.removePrefix("bytes=").substringBefore(',').trim().split('-')
+        if (parts.size != 2) return null
+        val start = parts[0].toLongOrNull() ?: 0L
+        val end = parts[1].toLongOrNull()?.coerceAtMost(totalSize - 1) ?: (totalSize - 1)
+        if (start > end || start < 0L) return null
+        return start to end
+    }
+
+    private suspend fun resolvePasswords(config: ServerConfig): Map<String, String> {
+        if (passwordResolver != null) return passwordResolver.invoke(config)
+        val vault = credentialVault ?: return emptyMap()
+        val map = mutableMapOf<String, String>()
+        for (user in config.users) {
+            if (!user.isAnonymous && !user.secretRef.isNullOrBlank()) {
+                val creds = vault.loadCredentials(user.secretRef, user.username)
+                creds.password?.let { map[user.username] = it }
+            }
+        }
+        return map
+    }
+
+    private fun newSessionToken(): String {
+        val bytes = ByteArray(32).also { SecureRandom().nextBytes(it) }
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
+    }
+
+    private fun recordClientActivity(ip: String, username: String, action: String, file: String?, deltaBytes: Long) {
+        if (deltaBytes > 0L) {
+            val total = totalBytesServed.addAndGet(deltaBytes)
+            _state.update { it.copy(totalBytesServed = total) }
+        }
+        val prev = activeClients[ip]
+        activeClients[ip] = ConnectedClientInfo(
+            clientId = ip,
+            serverType = ServerType.HTTPS,
+            remoteAddress = ip,
+            username = username,
+            currentAction = action,
+            currentFile = file,
+            bytesTransferred = (prev?.bytesTransferred ?: 0L) + deltaBytes,
+            connectedAtMillis = prev?.connectedAtMillis ?: System.currentTimeMillis(),
+        )
+        _clients.value = activeClients.values.toList()
+        _state.update { it.copy(activeClientCount = activeClients.size) }
+    }
+
+    private fun appendLog(level: LogLevel, rawMessage: String, config: ServerConfig?) {
+        val redacted = LogRedactor.redact(rawMessage, config?.rootDirectoryPath)
+        _logs.update { current ->
+            (listOf(ServerLogEntry(UUID.randomUUID().toString(), ServerType.HTTPS, System.currentTimeMillis(), level, redacted)) + current).take(200)
+        }
+    }
+
+    private fun buildUrls(port: Int): List<String> =
+        (localAddresses + "127.0.0.1").distinct().map { ip -> "https://$ip:$port" }
+
+    private fun isLanOrLoopback(addr: InetAddress): Boolean {
+        if (addr.isLoopbackAddress || addr.isSiteLocalAddress || addr.isLinkLocalAddress) return true
+        val bytes = addr.address
+        if (bytes.size == 4) {
+            val b0 = bytes[0].toInt() and 0xFF
+            val b1 = bytes[1].toInt() and 0xFF
+            if (b0 == 100 && (b1 and 0xC0) == 64) return true // CGNAT / Tailscale
+        }
+        return false
+    }
+
+    private fun loginHtml(errorMessage: String? = null, lockedOutSeconds: Long = 0L): String =
+        HttpsWebUiHtml.loginPage(errorMessage, lockedOutSeconds)
+
+    private fun browserHtml(currentPath: String, readOnly: Boolean, requireAuth: Boolean, currentUser: String): String =
+        HttpsWebUiHtml.fileBrowserPage(currentPath, readOnly, requireAuth, currentUser)
+
+    private companion object {
+        const val COOKIE_NAME = "portly_https_session"
+        const val SESSION_TTL_MS = 30 * 60 * 1000L
+        const val KEYSTORE_SECRET_REF = "portly_https_server_keystore_pw"
+    }
+}
