@@ -1284,7 +1284,7 @@ internal object HttpWebUiHtml {
                     <span>👤</span>
                     <span>${currentUser}</span>
                 </div>
-                <a href="/logout" class="glass-icon-btn" title="Sign out">
+                <a href="#" class="glass-icon-btn" title="Sign out" onclick="event.preventDefault(); fetch('/logout', {method:'POST',credentials:'same-origin'}).then(()=>location.href='/Web/Account/Login.htm').catch(()=>location.href='/Web/Account/Login.htm');">
                     <span>🚪</span>
                 </a>
             </div>
@@ -1501,7 +1501,8 @@ internal object HttpWebUiHtml {
             try {
                 const res = await fetch('/api/list?path=' + encodeURIComponent(currentPath));
                 if (res.ok) {
-                    allFiles = await res.json();
+                    const data = await res.json();
+                    allFiles = Array.isArray(data) ? data : (data.entries || []);
                     applyCategoryAndFilter();
                 } else {
                     tb.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color:#F87171;">⚠️ Unable to access folder</td></tr>';

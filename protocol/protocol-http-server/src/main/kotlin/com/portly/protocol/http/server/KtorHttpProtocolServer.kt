@@ -266,6 +266,15 @@ internal class KtorHttpProtocolServer(
                         call.respondRedirect("/login")
                     }
 
+                    get("/logout") {
+                        call.request.cookies[COOKIE_NAME]?.let { sessions.remove(it) }
+                        call.response.header(
+                            HttpHeaders.SetCookie,
+                            "$COOKIE_NAME=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0",
+                        )
+                        call.respondRedirect("/login")
+                    }
+
                     get("/assets/logo.png") {
                         call.respondBytes(HttpWebUiHtml.LOGO_PNG_BYTES, ContentType.parse("image/png"))
                     }
