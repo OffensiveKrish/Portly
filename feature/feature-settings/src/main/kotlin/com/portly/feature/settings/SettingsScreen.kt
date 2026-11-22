@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -75,6 +76,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -412,15 +414,17 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxSize(),
         ) { category ->
             if (category == null) {
-                // Top-Level Categorized Settings Menu
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    item {
-                        Column(modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)) {
+                // Top-Level Categorized Settings Menu (Stable, pinned top header)
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.background,
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                        ) {
                             Text(
                                 text = "Settings",
                                 style = MaterialTheme.typography.headlineSmall,
@@ -435,7 +439,14 @@ fun SettingsScreen(
                         }
                     }
 
-                    if (policy.isManaged) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        if (policy.isManaged) {
                         item {
                             Card(
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
@@ -512,7 +523,8 @@ fun SettingsScreen(
 
                     item { Spacer(modifier = Modifier.height(16.dp)) }
                 }
-            } else {
+            }
+        } else {
                 // Category Detail Sub-Screen
                 Column(
                     modifier = Modifier

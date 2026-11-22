@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -211,25 +212,26 @@ fun HomeScreen(
     var quickInput by remember { mutableStateOf("") }
     var quickProto by remember { mutableStateOf(ProtocolType.SFTP) }
 
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    Column(
+        modifier = modifier.fillMaxSize(),
     ) {
-        item {
+        // Pinned Header (Fixed at the top, does not scroll)
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.background,
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 4.dp, bottom = 4.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
                 Image(
                     painter = painterResource(com.portly.core.ui.R.drawable.ic_portly_logo),
                     contentDescription = "Portly Logo",
                     modifier = Modifier
-                        .size(46.dp)
+                        .size(44.dp)
                         .clip(RoundedCornerShape(12.dp)),
                 )
                 Column(modifier = Modifier.weight(1f)) {
@@ -247,6 +249,14 @@ fun HomeScreen(
                 }
             }
         }
+
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
 
         if (state.rootCheck.isPotentiallyRooted) {
             item {
@@ -579,6 +589,7 @@ fun HomeScreen(
 
         item { Spacer(modifier = Modifier.height(16.dp)) }
     }
+}
 }
 
 @Composable
