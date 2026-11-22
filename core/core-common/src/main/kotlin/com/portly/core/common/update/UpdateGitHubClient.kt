@@ -16,7 +16,6 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.io.IOException
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -87,7 +86,8 @@ class UpdateGitHubClient @Inject constructor() {
                     return@withContext UpdateResult.Success(null)
                 }
 
-                // Choose the best matching candidate
+                // GitHub returns releases newest-first. The first eligible release is the
+                // latest stable/beta candidate; versionCode remains the final authority.
                 val targetRelease = eligibleReleases.first()
                 val tagName = targetRelease["tag_name"]?.jsonPrimitive?.contentOrNull ?: ""
                 val versionName = tagName.removePrefix("v").trim()
@@ -98,7 +98,6 @@ class UpdateGitHubClient @Inject constructor() {
 
                 val assets = targetRelease["assets"]?.jsonArray?.mapNotNull { it as? JsonObject } ?: emptyList()
 
-                // Check for update-metadata.json asset
                 val metadataAsset = assets.firstOrNull {
                     it["name"]?.jsonPrimitive?.contentOrNull.equals("update-metadata.json", ignoreCase = true)
                 }
@@ -110,7 +109,6 @@ class UpdateGitHubClient @Inject constructor() {
                     }
                 }
 
-                // Locate APK asset
                 val apkAsset = assets.firstOrNull {
                     val name = it["name"]?.jsonPrimitive?.contentOrNull ?: ""
                     name.endsWith(".apk", ignoreCase = true) && !name.contains("-androidTest")
@@ -128,7 +126,6 @@ class UpdateGitHubClient @Inject constructor() {
                     ?: apkAsset?.get("size")?.jsonPrimitive?.longOrNull
                     ?: 0L
 
-                // If checksums file exists and hash wasn't in metadata, try fetching it
                 var sha256 = parsedMetadata?.apkSha256
                 if (sha256.isNullOrBlank()) {
                     val checksumsAsset = assets.firstOrNull {
@@ -149,20 +146,19 @@ class UpdateGitHubClient @Inject constructor() {
                     ?: parseVersionCodeFromVersionName(versionName)
 
                 val updateInfo = UpdateInfo(
-                    versionName = versionName,
+                    versionName = parsedMetadata?.versionName?.takeIf { it.isNotBlank() } ?: versionName,
                     versionCode = estimatedVersionCode,
                     releaseChannel = if (isPrerelease) ReleaseChannel.BETA else ReleaseChannel.STABLE,
-                    releaseNotes = releaseNotes,
-                    publishedAt = publishedAt,
+                    releaseNotes = parsedMetadata?.releaseNotes?.takeIf { it.isNotBlank() } ?: releaseNotes,
+                    publishedAt = parsedMetadata?.publishedAt?.takeIf { it.isNotBlank() } ?: publishedAt,
                     minSupportedSdk = parsedMetadata?.minSupportedSdk ?: 26,
                     apkDownloadUrl = apkDownloadUrl,
                     apkSha256 = sha256,
                     apkSizeBytes = apkSize,
                     signingCertificateFingerprint = parsedMetadata?.signingCertificateFingerprint,
-                    htmlUrl = htmlUrl,
+                    htmlUrl = parsedMetadata?.htmlUrl?.takeIf { it.isNotBlank() } ?: htmlUrl,
                 )
 
-                // Only consider it an update if it's strictly newer
                 if (updateInfo.versionCode > currentVersionCode) {
                     UpdateResult.Success(updateInfo)
                 } else {
@@ -214,7 +210,7 @@ class UpdateGitHubClient @Inject constructor() {
                         if (parts.size >= 2) {
                             val hash = parts[0]
                             val filename = parts[1].removePrefix("*")
-                            if (apkFileName == null || filename.equals(apkFileName, ignoreCase = true) || filename.endsWith(".apk")) {
+                            if (apkFileName == null || filename.equals(apkFileName, ignoreCase = true)) {
                                 return hash
                             }
                         }
@@ -228,14 +224,28 @@ class UpdateGitHubClient @Inject constructor() {
     }
 
     companion object {
+        /**
+         * CalVer fallback must match version.properties:
+         * versionCode = (YYYY * 100000) + (MM * 1000) + PATCH.
+         * Keep SemVer parsing for older installations/releases during migration.
+         * Release metadata should always supply the authoritative Android versionCode.
+         */
         fun parseVersionCodeFromVersionName(versionName: String): Long {
-            // Parses e.g. 1.2.3 or 1.2.3-beta.1 into a monotonic Long
-            val clean = versionName.split("-")[0]
+            val clean = versionName.substringBefore('-').trim()
             val segments = clean.split(".").mapNotNull { it.toLongOrNull() }
+
+            if (segments.size == 3 && segments[0] >= 2000L) {
+                val year = segments[0]
+                val month = segments[1]
+                val patch = segments[2]
+                if (month !in 1L..12L || patch !in 0L..999L) return 1L
+                return (year * 100_000L) + (month * 1_000L) + patch
+            }
+
             return when (segments.size) {
-                1 -> segments[0] * 1000000L
-                2 -> segments[0] * 1000000L + segments[1] * 1000L
-                3 -> segments[0] * 1000000L + segments[1] * 1000L + segments[2]
+                1 -> segments[0] * 1_000_000L
+                2 -> segments[0] * 1_000_000L + segments[1] * 1_000L
+                3 -> segments[0] * 1_000_000L + segments[1] * 1_000L + segments[2]
                 else -> 1L
             }
         }
