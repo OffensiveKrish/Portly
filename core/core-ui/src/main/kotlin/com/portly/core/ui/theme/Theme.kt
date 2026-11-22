@@ -17,21 +17,38 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Brush
 import androidx.core.view.WindowCompat
 import com.portly.core.model.ThemeMode
 
+object PortlyBrand {
+    val SunsetGold = Color(0xFFFFD18B)
+    val SunsetOrange = Color(0xFFFF8277)
+    val SunsetCoral = Color(0xFFFF546B)
+    val SunsetRed = Color(0xFFFF453A)
+
+    val SunsetGradient = Brush.linearGradient(
+        colors = listOf(SunsetGold, SunsetOrange, SunsetCoral),
+    )
+    val ButtonGradient = Brush.linearGradient(
+        colors = listOf(Color(0xFFFF6B4A), SunsetRed),
+    )
+    val StatusActiveGreen = Color(0xFF10B981)
+    val StatusActiveGreenBg = Color(0x1F10B981)
+}
+
 private val PortlyLightColors = lightColorScheme(
-    primary = Color(0xFF0D9488), // Deep Teal
+    primary = Color(0xFFFF546B), // Portly Sunset Coral
     onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFCCFBF1), // Soft Mint
-    onPrimaryContainer = Color(0xFF115E59),
-    secondary = Color(0xFF0284C7), // Sky / Ocean
+    primaryContainer = Color(0xFFFFECEB), // Soft Coral Tint
+    onPrimaryContainer = Color(0xFF881424),
+    secondary = Color(0xFFFF8C42), // Warm Sunset Amber
     onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFE0F2FE),
-    onSecondaryContainer = Color(0xFF075985),
-    tertiary = Color(0xFF6366F1), // Indigo
+    secondaryContainer = Color(0xFFFFF0DC),
+    onSecondaryContainer = Color(0xFF7A340F),
+    tertiary = Color(0xFFFF7E5F), // Radiant Coral
     background = Color(0xFFF8FAFC),
-    onBackground = Color(0xFF0F172A), // Dark Charcoal
+    onBackground = Color(0xFF0F172A),
     surface = Color(0xFFFFFFFF),
     onSurface = Color(0xFF0F172A),
     surfaceVariant = Color(0xFFF1F5F9),
@@ -41,8 +58,8 @@ private val PortlyLightColors = lightColorScheme(
     surfaceContainer = Color(0xFFF1F5F9),
     surfaceContainerHigh = Color(0xFFE2E8F0),
     surfaceContainerHighest = Color(0xFFCBD5E1),
-    outline = Color(0xFFCBD5E1),
-    outlineVariant = Color(0xFFE2E8F0),
+    outline = Color(0xFFE2E8F0),
+    outlineVariant = Color(0xFFCBD5E1),
     error = Color(0xFFDC2626),
     onError = Color(0xFFFFFFFF),
     errorContainer = Color(0xFFFEE2E2),
@@ -50,28 +67,28 @@ private val PortlyLightColors = lightColorScheme(
 )
 
 private val PortlyDarkColors = darkColorScheme(
-    primary = Color(0xFF2DD4BF), // Bright Teal
-    onPrimary = Color(0xFF042F2E),
-    primaryContainer = Color(0xFF115E59),
-    onPrimaryContainer = Color(0xFFCCFBF1),
-    secondary = Color(0xFF38BDF8), // Sky
-    onSecondary = Color(0xFF082F49),
-    secondaryContainer = Color(0xFF0369A1),
-    onSecondaryContainer = Color(0xFFE0F2FE),
-    tertiary = Color(0xFFA78BFA),
-    background = Color(0xFF0B1120), // Dark Slate
+    primary = Color(0xFFFF6B4A), // Radiant Sunset Orange for Dark Mode
+    onPrimary = Color(0xFF2C0A0E),
+    primaryContainer = Color(0xFF45151B),
+    onPrimaryContainer = Color(0xFFFFD5D8),
+    secondary = Color(0xFFFFA880), // Warm Golden Amber
+    onSecondary = Color(0xFF331608),
+    secondaryContainer = Color(0xFF4A2514),
+    onSecondaryContainer = Color(0xFFFFDBCB),
+    tertiary = Color(0xFFFF8277),
+    background = Color(0xFF0B0F17), // Cosmic Obsidian
     onBackground = Color(0xFFF8FAFC),
-    surface = Color(0xFF0B1120),
+    surface = Color(0xFF121824), // Frosted Dark Slate
     onSurface = Color(0xFFF8FAFC),
-    surfaceVariant = Color(0xFF1E293B),
+    surfaceVariant = Color(0xFF1A2233),
     onSurfaceVariant = Color(0xFF94A3B8),
-    surfaceContainerLowest = Color(0xFF070B14),
-    surfaceContainerLow = Color(0xFF0F172A),
-    surfaceContainer = Color(0xFF141E33),
-    surfaceContainerHigh = Color(0xFF1E293B),
-    surfaceContainerHighest = Color(0xFF28354D),
-    outline = Color(0xFF334155),
-    outlineVariant = Color(0xFF1E293B),
+    surfaceContainerLowest = Color(0xFF070A10),
+    surfaceContainerLow = Color(0xFF0D121D),
+    surfaceContainer = Color(0xFF131A28),
+    surfaceContainerHigh = Color(0xFF1C2538),
+    surfaceContainerHighest = Color(0xFF26324A),
+    outline = Color(0xFF2C3954),
+    outlineVariant = Color(0xFF1E283C),
     error = Color(0xFFF87171),
     onError = Color(0xFF450A0A),
     errorContainer = Color(0xFF7F1D1D),
@@ -81,14 +98,14 @@ private val PortlyDarkColors = darkColorScheme(
 private val PortlyAmoledColors = PortlyDarkColors.copy(
     background = Color(0xFF000000),
     surface = Color(0xFF000000),
-    surfaceVariant = Color(0xFF121212),
+    surfaceVariant = Color(0xFF10131B),
     surfaceContainerLowest = Color(0xFF000000),
-    surfaceContainerLow = Color(0xFF09090B),
-    surfaceContainer = Color(0xFF101014),
-    surfaceContainerHigh = Color(0xFF18181D),
-    surfaceContainerHighest = Color(0xFF202026),
-    outline = Color(0xFF27272A),
-    outlineVariant = Color(0xFF18181B),
+    surfaceContainerLow = Color(0xFF06080E),
+    surfaceContainer = Color(0xFF0B0E16),
+    surfaceContainerHigh = Color(0xFF141822),
+    surfaceContainerHighest = Color(0xFF1C2230),
+    outline = Color(0xFF22293A),
+    outlineVariant = Color(0xFF161A26),
 )
 
 private val PortlyTypography = Typography(
