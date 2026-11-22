@@ -418,6 +418,16 @@ internal class KtorHttpsProtocolServer(
                         serveFileDownload(call, config, user, reqPath)
                     }
 
+                    get("/api/download") {
+                        val user = authorizeOrChallenge(call, config, passwords, redirectToLogin = true) ?: return@get
+                        if (!hasPermission(config, user, ServerPermission.READ)) {
+                            call.respond(HttpStatusCode.Forbidden, "Read permission denied")
+                            return@get
+                        }
+                        val reqPath = call.request.queryParameters["path"] ?: ""
+                        serveFileDownload(call, config, user, reqPath)
+                    }
+
                     post("/api/upload") {
                         val user = authorizeOrChallenge(call, config, passwords, redirectToLogin = false) ?: return@post
                         if (config.readOnly || !hasPermission(config, user, ServerPermission.WRITE)) {
