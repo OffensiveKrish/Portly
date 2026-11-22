@@ -18,11 +18,19 @@ class UpdateUnitTest {
     val tempFolder = TemporaryFolder()
 
     @Test
-    fun testVersionCodeParsing() {
+    fun testVersionCodeParsingSupportsLegacySemVerAndPortlyCalVer() {
         assertEquals(1000000L, UpdateGitHubClient.parseVersionCodeFromVersionName("1"))
         assertEquals(1002000L, UpdateGitHubClient.parseVersionCodeFromVersionName("1.2"))
         assertEquals(1002003L, UpdateGitHubClient.parseVersionCodeFromVersionName("1.2.3"))
         assertEquals(2000000L, UpdateGitHubClient.parseVersionCodeFromVersionName("2.0.0-beta.1"))
+
+        // Must exactly match version.properties: (YYYY * 100000) + (MM * 1000) + PATCH.
+        assertEquals(202611000L, UpdateGitHubClient.parseVersionCodeFromVersionName("2026.11.0"))
+        assertEquals(202611001L, UpdateGitHubClient.parseVersionCodeFromVersionName("2026.11.1"))
+        assertEquals(202701000L, UpdateGitHubClient.parseVersionCodeFromVersionName("2027.01.0"))
+        assertEquals(202611001L, UpdateGitHubClient.parseVersionCodeFromVersionName("2026.11.1-beta.2"))
+        assertEquals(1L, UpdateGitHubClient.parseVersionCodeFromVersionName("2026.13.0"))
+        assertEquals(1L, UpdateGitHubClient.parseVersionCodeFromVersionName("2026.11.1000"))
     }
 
     @Test
@@ -34,7 +42,6 @@ class UpdateUnitTest {
         assertNotNull(sha256)
         assertEquals(64, sha256.length)
 
-        // Verify matches itself
         val recomputed = ChecksumUtils.computeFileDigest(sampleFile, "SHA-256")
         assertEquals(sha256, recomputed)
     }
@@ -42,16 +49,16 @@ class UpdateUnitTest {
     @Test
     fun testUpdateInfoDefaults() {
         val info = UpdateInfo(
-            versionName = "1.1.0",
-            versionCode = 1001000L,
+            versionName = "2026.11.0",
+            versionCode = 202611000L,
             releaseChannel = ReleaseChannel.STABLE,
-            releaseNotes = "New features",
-            apkDownloadUrl = "https://example.com/Portly.apk",
+            releaseNotes = "Release migration",
+            apkDownloadUrl = "https://example.com/Portly-2026.11.0.apk",
             apkSha256 = "abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234",
             apkSizeBytes = 8000000L,
         )
 
-        assertEquals("1.1.0", info.versionName)
+        assertEquals("2026.11.0", info.versionName)
         assertEquals(ReleaseChannel.STABLE, info.releaseChannel)
         assertTrue(info.versionCode > 1)
         assertFalse(info.apkSha256.isNullOrBlank())
