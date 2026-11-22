@@ -56,7 +56,7 @@ Starting with November 2026, Portly officially follows **Calendar Versioning (Ca
   - 7 organized categories: Server Configuration & DDNS, File Management, Transfers & Performance, Appearance & Theme, Security & Protocols, Privacy & Audit Diagnostics, and About & Support.
   - Animated sub-screens with system back handling.
 - **Automatic In-App Updates**:
-  - GitHub Releases API integration for both **Stable** (`vX.Y.Z`) and **Beta** (`vX.Y.Z-beta.N`) channels.
+  - GitHub Releases API integration for **Stable CalVer** (`YYYY.MM.PATCH`) and **Beta CalVer** (`YYYY.MM.PATCH-beta.N`) channels, with Android versionCode supplied by signed release metadata.
   - Background periodic update checks via Android WorkManager.
   - Update notifications when new releases are detected.
   - Multi-stage security verification before install: package ID matching, downgrade prevention, SHA-256 hash check, and APK signing certificate fingerprint validation.

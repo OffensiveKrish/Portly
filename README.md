@@ -45,7 +45,7 @@ Connect securely to remote storage across all major network protocols:
 
 ## 📲 Download & Installation
 
-Portly is distributed independently through **GitHub Releases** as signed, standalone Android APK packages. No Google Play or third-party store account is required.
+Portly is distributed independently through **GitHub Releases** as signed, standalone Android APK packages. No Google Play or third-party store account is required. Stable releases use Calendar Versioning (CalVer): `YYYY.MM.PATCH`.
 
 ### System Requirements
 - **Minimum OS**: Android 8.0 (Oreo / API Level 26)
@@ -54,7 +54,7 @@ Portly is distributed independently through **GitHub Releases** as signed, stand
 
 ### How to Install
 1. Open the [**Releases**](https://github.com/OffensiveKrish/Portly/releases) page on your Android device.
-2. Under the latest **Stable Release** (or **Beta Release** if testing), download `Portly-vX.Y.Z-universal.apk`.
+2. Under the latest **Stable Release** (or **Beta Release** if testing), download `Portly-YYYY.MM.PATCH-universal.apk` (for example, `Portly-2026.11.0-universal.apk`).
 3. Tap the downloaded APK file to install.
    - If prompted by Android, enable **"Allow from this source"** for your browser or file manager to permit installing unknown apps.
 4. Launch **Portly** from your app drawer.
@@ -70,7 +70,7 @@ Compare the SHA-256 hash of your downloaded APK against the hash published in `S
 
 ```bash
 # On Linux / macOS
-sha256sum Portly-v1.0.0-universal.apk
+sha256sum Portly-2026.11.0-universal.apk
 
 # On Windows PowerShell
 Get-FileHash -Algorithm SHA256 .\Portly-v1.0.0-universal.apk
@@ -80,7 +80,7 @@ Get-FileHash -Algorithm SHA256 .\Portly-v1.0.0-universal.apk
 Inspect the cryptographic signing certificate using Android SDK's `apksigner`:
 
 ```bash
-apksigner verify --print-certs Portly-v1.0.0-universal.apk
+apksigner verify --print-certs Portly-2026.11.0-universal.apk
 ```
 
 Ensure the certificate SHA-256 fingerprint matches the official Portly release signing key published in [`SECURITY.md`](SECURITY.md).
