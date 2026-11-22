@@ -1,7 +1,7 @@
 # Portly — Connect. Transfer. Manage. Anywhere.
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![Android CI](https://github.com/upgrdify/portly/actions/workflows/android-ci.yml/badge.svg)](https://github.com/upgrdify/portly/actions/workflows/android-ci.yml)
+[![Android CI](https://github.com/OffensiveKrish/Portly/actions/workflows/android-ci.yml/badge.svg)](https://github.com/OffensiveKrish/Portly/actions/workflows/android-ci.yml)
 [![Min Android SDK](https://img.shields.io/badge/Android-8.0%2B%20(API%2026)-green.svg)](https://developer.android.com)
 
 **Portly** is a modern, enterprise-grade, privacy-respecting Android application for local server hosting, remote protocol access, full-featured file management, and secure file transfers.
@@ -53,7 +53,7 @@ Portly is distributed independently through **GitHub Releases** as signed, stand
 - **Architecture**: Universal APK (ARM64-v8a, ARMv7a, x86_64)
 
 ### How to Install
-1. Open the [**Releases**](https://github.com/upgrdify/portly/releases) page on your Android device.
+1. Open the [**Releases**](https://github.com/OffensiveKrish/Portly/releases) page on your Android device.
 2. Under the latest **Stable Release** (or **Beta Release** if testing), download `Portly-vX.Y.Z-universal.apk`.
 3. Tap the downloaded APK file to install.
    - If prompted by Android, enable **"Allow from this source"** for your browser or file manager to permit installing unknown apps.

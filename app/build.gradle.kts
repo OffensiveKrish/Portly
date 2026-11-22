@@ -18,8 +18,8 @@ android {
         versionCode = 1
         versionName = "1.0.0"
 
-        buildConfigField("String", "GITHUB_REPO_OWNER", "\"upgrdify\"")
-        buildConfigField("String", "GITHUB_REPO_NAME", "\"portly\"")
+        buildConfigField("String", "GITHUB_REPO_OWNER", "\"OffensiveKrish\"")
+        buildConfigField("String", "GITHUB_REPO_NAME", "\"Portly\"")
         buildConfigField("String", "EXPECTED_SIGNING_CERT_SHA256", "\"09637AB91C8C71A5BFCCD4E3E7F6A552991B9F14153D84F68A67E08F22D01D1A\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

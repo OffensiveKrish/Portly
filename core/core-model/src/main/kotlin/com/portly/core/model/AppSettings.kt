@@ -69,7 +69,7 @@ data class AppSettings(
     val notifyOnUpdate: Boolean = true,
     val lastUpdateCheckTimestamp: Long = 0L,
     val ignoredUpdateVersionCode: Long = 0L,
-    val customGitHubRepo: String = "upgrdify/portly",
+    val customGitHubRepo: String = "OffensiveKrish/Portly",
 )
 
 data class EnterprisePolicy(
