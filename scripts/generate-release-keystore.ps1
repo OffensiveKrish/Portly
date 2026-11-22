@@ -1,4 +1,4 @@
-﻿# Portly — Production Release Keystore Generation Script (PowerShell)
+# Portly — Production Release Keystore Generation Script (PowerShell)
 # Generates a high-security RSA 4096-bit permanent production signing identity.
 #
 # IMPORTANT:
