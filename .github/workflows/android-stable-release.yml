@@ -73,16 +73,16 @@ jobs:
             echo "KEYSTORE_PATH=/tmp/portly-release.keystore" >> $GITHUB_OUTPUT
             echo "Keystore successfully decoded from protected secret."
           else
-            echo "KEYSTORE_PATH=" >> $GITHUB_OUTPUT
+            echo "KEYSTORE_PATH=app/release-test.keystore" >> $GITHUB_OUTPUT
             echo "Notice: ANDROID_KEYSTORE_BASE64 not configured, falling back to build release keystore."
           fi
 
       - name: Build Production Release APK
         env:
           PORTLY_KEYSTORE_PATH: ${{ steps.decode_keystore.outputs.KEYSTORE_PATH }}
-          PORTLY_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          PORTLY_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          PORTLY_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          PORTLY_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD || 'portly-release-test' }}
+          PORTLY_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS || 'portly-test' }}
+          PORTLY_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || 'portly-release-test' }}
         run: ./gradlew assembleRelease --console=plain
 
       - name: Package Release Assets & Generate Source Archive

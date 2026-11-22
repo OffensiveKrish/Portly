@@ -38,17 +38,18 @@ android {
 
     signingConfigs {
         create("release") {
-            val envPath = System.getenv("PORTLY_KEYSTORE_PATH") ?: System.getenv("ANDROID_KEYSTORE_PATH")
+            val envPath = System.getenv("PORTLY_KEYSTORE_PATH")?.takeIf { it.isNotBlank() }
+                ?: System.getenv("ANDROID_KEYSTORE_PATH")?.takeIf { it.isNotBlank() }
             val keystoreFile = if (!envPath.isNullOrBlank()) file(envPath) else file("release-test.keystore")
             storeFile = if (keystoreFile.exists()) keystoreFile else file("release-test.keystore")
-            storePassword = System.getenv("PORTLY_KEYSTORE_PASSWORD")
-                ?: System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            storePassword = System.getenv("PORTLY_KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() }
+                ?: System.getenv("ANDROID_KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() }
                 ?: "portly-release-test"
-            keyAlias = System.getenv("PORTLY_KEY_ALIAS")
-                ?: System.getenv("ANDROID_KEY_ALIAS")
+            keyAlias = System.getenv("PORTLY_KEY_ALIAS")?.takeIf { it.isNotBlank() }
+                ?: System.getenv("ANDROID_KEY_ALIAS")?.takeIf { it.isNotBlank() }
                 ?: "portly-test"
-            keyPassword = System.getenv("PORTLY_KEY_PASSWORD")
-                ?: System.getenv("ANDROID_KEY_PASSWORD")
+            keyPassword = System.getenv("PORTLY_KEY_PASSWORD")?.takeIf { it.isNotBlank() }
+                ?: System.getenv("ANDROID_KEY_PASSWORD")?.takeIf { it.isNotBlank() }
                 ?: "portly-release-test"
         }
     }

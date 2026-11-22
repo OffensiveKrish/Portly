@@ -43,6 +43,7 @@ proguard/
 # Keystores & Signing Secrets (NEVER COMMIT)
 *.jks
 *.keystore
+!app/release-test.keystore
 *.key
 *.pem
 *.p12
