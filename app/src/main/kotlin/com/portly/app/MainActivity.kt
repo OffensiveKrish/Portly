@@ -476,7 +476,7 @@ private fun PortlyAppShell(
     showChangelogDialog?.let { update ->
         AlertDialog(
             onDismissRequest = { showChangelogDialog = null },
-            title = { Text("Release Notes — v${update.versionName}") },
+            title = { Text("Release Notes — Portly ${update.versionName}") },
             text = {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),

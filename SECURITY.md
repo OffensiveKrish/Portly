@@ -48,7 +48,7 @@ Verified on JVM test runner + Android Gradle Plugin `9.5.0` via:
 
 ## 4. Release Artifact Integrity & Signing Keys
 
-Official Portly production releases are distributed exclusively via [GitHub Releases](https://github.com/upgrdify/portly/releases) and are signed with a permanent cryptographic release key.
+Official Portly production releases are distributed exclusively via [GitHub Releases](https://github.com/OffensiveKrish/Portly/releases) and are signed with a permanent cryptographic release key.
 
 ### Official Release Signing Identity
 - **Algorithm**: RSA 4096-bit (or EC P-256) with SHA-256

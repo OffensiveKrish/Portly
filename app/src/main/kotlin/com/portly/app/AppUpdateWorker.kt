@@ -31,6 +31,7 @@ class AppUpdateWorker @AssistedInject constructor(
             repo = settings.customGitHubRepo,
             channel = settings.updateReleaseChannel,
             currentVersionCode = updateManager.currentVersionCode,
+            currentVersionName = updateManager.currentVersionName,
         )
 
         val now = System.currentTimeMillis()

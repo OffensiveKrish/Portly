@@ -333,7 +333,7 @@ class TransferEngineTest {
         val sub = File(rootDir, "sub").apply { mkdirs() }
         File(sub, "b.txt").writeText("two")
 
-        val fakeClient = FakeProtocolClient(files = mutableMapOf())
+        val fakeClient = FakeProtocolClient(files = java.util.concurrent.ConcurrentHashMap())
         val store = InMemoryTransferStore()
         val engine = createEngine(store, JvmLocalEndpointIo(), fakeClient)
 

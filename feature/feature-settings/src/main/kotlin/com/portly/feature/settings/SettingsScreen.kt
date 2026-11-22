@@ -1108,7 +1108,7 @@ fun SettingsScreen(
                                                 Column(modifier = Modifier.weight(1f)) {
                                                     Text("Installed Version", style = MaterialTheme.typography.bodyLarge)
                                                     Text(
-                                                        text = "v${viewModel.updateManager.currentVersionName} (Build ${viewModel.updateManager.currentVersionCode})",
+                                                        text = "Version ${viewModel.updateManager.currentVersionName} (Build ${viewModel.updateManager.currentVersionCode})",
                                                         style = MaterialTheme.typography.bodySmall,
                                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                     )
@@ -1690,7 +1690,7 @@ private fun SettingsCategoryItem(
                 )
                 Text(
                     text = if (category == SettingsCategory.ABOUT && versionName.isNotBlank()) {
-                        "v$versionName, feedback & bug report, privacy policy"
+                        "Version $versionName, feedback & bug report, privacy policy"
                     } else {
                         category.subtitle
                     },

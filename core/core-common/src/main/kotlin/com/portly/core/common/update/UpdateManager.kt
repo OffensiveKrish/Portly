@@ -35,9 +35,9 @@ class UpdateManager @Inject constructor(
     val currentVersionName: String by lazy {
         try {
             val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            pInfo.versionName ?: "1.0.0"
+            pInfo.versionName ?: "2026.11.0"
         } catch (_: Exception) {
-            "1.0.0"
+            "2026.11.0"
         }
     }
 
@@ -51,7 +51,7 @@ class UpdateManager @Inject constructor(
                 pInfo.versionCode.toLong()
             }
         } catch (_: Exception) {
-            1L
+            202611000L
         }
     }
 
@@ -71,6 +71,7 @@ class UpdateManager @Inject constructor(
                 repo = targetRepo,
                 channel = channel,
                 currentVersionCode = currentVersionCode,
+                currentVersionName = currentVersionName,
             )
 
             val now = System.currentTimeMillis()

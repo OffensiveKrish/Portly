@@ -10,6 +10,14 @@ Starting with November 2026, Portly officially follows **Calendar Versioning (Ca
 
 ### Added
 - **Centralized CalVer Management**: Adopted `YYYY.MM.PATCH` (e.g. `2026.11.0`) with monotonically increasing integer `versionCode` (`202611000`) defined in `version.properties`.
+- **Automatic Release Migration & Update Detection**:
+  - CalVer-aware version parser and comparator (`PortlyVersion`) supporting backward compatibility with existing legacy `v1.0.0` installations.
+  - Structured update metadata (`update-metadata.json`) schema supporting both modern and legacy client deserialization.
+  - Anti-downgrade verification, SHA-256 integrity validation, and signing certificate verification prior to package installer invocation.
+- **Glassmorphism Browser Access Experience**:
+  - Compact 48px unified command bar consolidating Breadcrumbs, Search, View Mode, and Actions.
+  - Ambient full-window drag-and-drop file upload overlay.
+  - Universal in-browser file reading: syntax/monospace viewer for text/code/data files with one-click copy, interactive image lightbox with rotation, audio/video streaming, embedded PDF reader, and rich metadata inspector for office documents and archives.
 - **GPL-3.0 Source Archive Automation**: Automated `Portly-YYYY.MM.PATCH-source.zip` packaging in GitHub Actions for full licensing compliance.
 - **Enhanced Quick Connect Experience**:
   - Interactive protocol selector with default port indicators (SFTP: 22, FTPS: 2122, FTP: 2121, WebDAV: 8080, SMB: 445).

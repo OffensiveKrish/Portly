@@ -119,15 +119,41 @@ jobs:
           CERT_FINGERPRINT=$("${ANDROID_HOME}/build-tools/35.0.0/apksigner" verify --print-certs "$APK_CANONICAL" | grep "SHA-256 digest:" | head -n 1 | awk '{print $3}' || echo "")
           echo "CERT_FINGERPRINT=${CERT_FINGERPRINT}" >> $GITHUB_OUTPUT
           
+          # Extract exact build metadata
+          VERSION_CODE=$(grep "^VERSION_CODE=" version.properties | cut -d'=' -f2)
+          if [ -z "$VERSION_CODE" ]; then
+            VERSION_CODE=202611000
+          fi
+          APK_SIZE=$(wc -c < "$APK_CANONICAL" | tr -d ' ')
+          TODAY=$(date -u +%Y-%m-%d)
+          PUB_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
           # Generate update-metadata.json for In-App Auto-Update System
           cat <<EOF > update-metadata.json
           {
+            "schemaVersion": 1,
+            "applicationId": "com.portly.app",
+            "channel": "stable",
+            "version": "${VERSION}",
+            "versionCode": ${VERSION_CODE},
+            "releaseTag": "${{ steps.version_step.outputs.TAG_NAME }}",
+            "releaseDate": "${TODAY}",
+            "minimumSupportedVersion": "1.0.0",
+            "mandatory": false,
+            "releaseNotes": "Portly ${VERSION} CalVer release with Glassmorphism Browser Access, universal in-browser file reading, and centralized release management.",
+            "assets": {
+              "apk": "${APK_UNIVERSAL}",
+              "checksum": "SHA256SUMS.txt"
+            },
+            "sha256": "${SHA256_APK}",
+            "downloadUrl": "https://github.com/${{ github.repository }}/releases/download/${{ steps.version_step.outputs.TAG_NAME }}/${APK_UNIVERSAL}",
             "versionName": "${VERSION}",
             "releaseChannel": "STABLE",
-            "publishedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "publishedAt": "${PUB_DATE}",
             "minSupportedSdk": 26,
-            "apkDownloadUrl": "https://github.com/${{ github.repository }}/releases/download/${{ steps.version_step.outputs.TAG_NAME }}/${APK_CANONICAL}",
+            "apkDownloadUrl": "https://github.com/${{ github.repository }}/releases/download/${{ steps.version_step.outputs.TAG_NAME }}/${APK_UNIVERSAL}",
             "apkSha256": "${SHA256_APK}",
+            "apkSizeBytes": ${APK_SIZE},
             "signingCertificateFingerprint": "${CERT_FINGERPRINT}",
             "htmlUrl": "https://github.com/${{ github.repository }}/releases/tag/${{ steps.version_step.outputs.TAG_NAME }}"
           }
