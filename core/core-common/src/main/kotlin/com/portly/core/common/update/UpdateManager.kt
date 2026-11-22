@@ -35,9 +35,9 @@ class UpdateManager @Inject constructor(
     val currentVersionName: String by lazy {
         try {
             val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            pInfo.versionName ?: "2026.11.0"
+            pInfo.versionName ?: "2026.11.1"
         } catch (_: Exception) {
-            "2026.11.0"
+            "2026.11.1"
         }
     }
 

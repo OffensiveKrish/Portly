@@ -937,7 +937,7 @@ internal class KtorHttpProtocolServer(
         return HttpDeviceInfo(
             deviceName = model,
             androidVersion = osVer,
-            serverVersion = "2026.11.0",
+            serverVersion = "2026.11.1",
             totalStorageBytes = total,
             freeStorageBytes = free,
             usedStorageBytes = used,

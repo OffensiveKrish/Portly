@@ -15,8 +15,8 @@ val versionProps = Properties().apply {
         FileInputStream(versionPropsFile).use { load(it) }
     }
 }
-val appVersionName: String = versionProps.getProperty("VERSION_NAME", "2026.11.0")
-val appVersionCode: Int = versionProps.getProperty("VERSION_CODE", "202611000").toInt()
+val appVersionName: String = versionProps.getProperty("VERSION_NAME", "2026.11.1")
+val appVersionCode: Int = versionProps.getProperty("VERSION_CODE", "202611001").toInt()
 
 android {
     namespace = "com.portly.app"

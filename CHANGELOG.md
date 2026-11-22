@@ -6,6 +6,31 @@ Starting with November 2026, Portly officially follows **Calendar Versioning (Ca
 
 ---
 
+## [2026.11.1] - 2026-11-22
+
+### Added
+- **Enterprise High-Contrast Browser Access Experience**:
+  - Implemented high-contrast solid surface architecture replacing low-contrast glassmorphism: Slate-950 (`#090D16`) dark canvas, Slate-900 (`#0F172A`) elevated surfaces, Slate-800 (`#1E293B`) solid borders, and Slate-50 (`#F8FAFC`) light canvas.
+  - Vibrant Coral-Orange (`#F95738` / `#EA580C`) brand accents and Emerald (`#10B981`) active TLS 1.3 security badges.
+  - Tabular numerals (`tabular-nums`) for timestamps, file sizes, and storage meters; monospace for device IP and port indicators.
+- **7 Responsive Category Quick-Filter Cards**:
+  - Responsive horizontal stat card grid for `All Files`, `Folders`, `Images`, `Videos`, `Audio`, `Documents`, and `Archives`.
+  - Distinct soft-tinted vector icons, bold titles, and real-time live counters.
+- **Action Buttons & Viewport-Aware Context Menu**:
+  - Dedicated row action buttons for `Open`, `Download`, `Rename`, and `Delete` on every file and folder.
+  - 3-dot context menu popover with automatic viewport boundary and flip detection (auto-flips upwards near the viewport bottom).
+  - Quick Share modal with dynamic QR code generation and instant clipboard copy.
+  - In-browser preview modal for images, plain text, code, audio, and video files.
+  - Floating bulk action bar for multi-file selection, batch deletion, and ZIP archive downloads.
+
+### Fixed
+- **File List Directory Parsing**: Handled both JSON array and object envelope `{path, entries}` responses in `/api/list` to resolve network error toast triggers.
+- **HTTP 405 Method Not Allowed on Sign Out**: Added `GET /logout` alias endpoint alongside `POST /logout` on both HTTP and HTTPS servers.
+- **Download Route Compatibility**: Added `/api/download` route alias to prevent 404s when downloading via API routes.
+- **Version Increment**: Monotonically increased build to CalVer `2026.11.1` (`versionCode: 202611001`).
+
+---
+
 ## [2026.11.0] - 2026-11-22
 
 ### Added
