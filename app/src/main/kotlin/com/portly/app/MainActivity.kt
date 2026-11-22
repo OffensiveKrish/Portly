@@ -343,12 +343,11 @@ private fun PortlyAppShell(
             }
         },
     ) {
-        Scaffold { innerPadding ->
-            NavHost(
-                navController = navController,
-                startDestination = PortlyDestination.HOME.route,
-                modifier = Modifier.padding(innerPadding),
-            ) {
+        NavHost(
+            navController = navController,
+            startDestination = PortlyDestination.HOME.route,
+            modifier = Modifier.fillMaxSize(),
+        ) {
                 composable(PortlyDestination.HOME.route) {
                     HomeScreen(
                         onOpenFiles = { navigateTo(PortlyDestination.FILES.route) },
@@ -433,7 +432,6 @@ private fun PortlyAppShell(
                 }
             }
         }
-    }
 
     if (updateStatus is UpdateStatus.UpdateAvailable) {
         val update = (updateStatus as UpdateStatus.UpdateAvailable).updateInfo

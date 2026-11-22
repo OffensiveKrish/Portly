@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,12 +24,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Clear
 import androidx.compose.material.icons.outlined.CloudQueue
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.Error
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.Button
@@ -36,11 +41,13 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -156,12 +163,23 @@ class HomeViewModel @Inject constructor(
         fallbackProtocol: ProtocolType,
         onCreated: (String) -> Unit,
     ) {
-        val trimmed = rawInput.trim()
+        val trimmed = rawInput.trim().replace('\\', '/')
         if (trimmed.isEmpty()) return
-        val normalized = if (trimmed.contains("://")) trimmed else "${fallbackProtocol.scheme}://$trimmed"
-        val uri = runCatching { URI(normalized) }.getOrNull() ?: return
-        val host = uri.host?.takeIf { it.isNotBlank() } ?: return
-        val proto = when (uri.scheme?.lowercase()) {
+        val hasScheme = trimmed.contains("://")
+        val effectiveScheme = if (hasScheme) trimmed.substringBefore("://") else fallbackProtocol.scheme
+        val schemeStripped = if (hasScheme) trimmed.substringAfter("://") else trimmed
+
+        val userInfo = if (schemeStripped.contains('@')) schemeStripped.substringBeforeLast('@') else null
+        val hostPart = if (schemeStripped.contains('@')) schemeStripped.substringAfterLast('@') else schemeStripped
+
+        val pathPart = if (hostPart.contains('/')) "/" + hostPart.substringAfter('/').trim('/') else "/"
+        val hostAndPort = hostPart.substringBefore('/')
+        val host = hostAndPort.substringBefore(':').trim()
+        val parsedPort = hostAndPort.substringAfter(':', "").toIntOrNull()
+
+        if (host.isBlank()) return
+
+        val proto = when (effectiveScheme.lowercase()) {
             "ftp" -> ProtocolType.FTP
             "ftps" -> ProtocolType.FTPS
             "sftp", "ssh" -> ProtocolType.SFTP
@@ -169,10 +187,10 @@ class HomeViewModel @Inject constructor(
             "smb" -> ProtocolType.SMB
             else -> fallbackProtocol
         }
-        val port = if (uri.port in 1..65535) uri.port else proto.defaultPort
-        val user = uri.userInfo?.substringBefore(':').orEmpty()
-        val pass = uri.userInfo?.substringAfter(':', "")?.takeIf { uri.userInfo.contains(':') }
-        val rootPath = uri.path?.takeIf { it.isNotBlank() } ?: "/"
+        val port = parsedPort?.takeIf { it in 1..65535 } ?: proto.defaultPort
+        val user = userInfo?.substringBefore(':').orEmpty()
+        val pass = userInfo?.substringAfter(':', "")?.takeIf { userInfo.contains(':') }
+        val rootPath = pathPart.ifBlank { "/" }
 
         viewModelScope.launch {
             val id = UUID.randomUUID().toString()
@@ -217,7 +235,9 @@ fun HomeScreen(
     ) {
         // Pinned Header (Fixed at the top, does not scroll)
         Surface(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding(),
             color = MaterialTheme.colorScheme.background,
         ) {
             Row(
@@ -349,6 +369,31 @@ fun HomeScreen(
                             }
                         }
                     }
+                    if (net.isConnected && net.transport != com.portly.network.NetworkTransport.WIFI_OR_ETHERNET && !net.isHotspotActive) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Icon(
+                                    Icons.Outlined.Info,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                                Text(
+                                    text = "Cellular active: Use Wi-Fi or Hotspot to transfer with PC/local devices.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -363,11 +408,30 @@ fun HomeScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Text(
-                        text = "Quick Connect",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "Quick Connect",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Surface(
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            shape = RoundedCornerShape(6.dp),
+                        ) {
+                            Text(
+                                text = "Default Port: ${quickProto.defaultPort}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            )
+                        }
+                    }
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -380,6 +444,63 @@ fun HomeScreen(
                             )
                         }
                     }
+
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = when (quickProto) {
+                                        ProtocolType.SFTP -> "SSH Secure File Transfer • Port 22"
+                                        ProtocolType.FTPS -> "SSL/TLS Secure FTP • Port 2122 / 990"
+                                        ProtocolType.FTP -> "Standard FTP Server • Port 2121 / 21"
+                                        ProtocolType.WEBDAV -> "WebDAV HTTP/HTTPS • Port 8080"
+                                        ProtocolType.SMB -> "Windows Share / Samba • Port 445"
+                                        else -> "${quickProto.displayName} • Port ${quickProto.defaultPort}"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Medium,
+                                )
+                                Text(
+                                    text = when (quickProto) {
+                                        ProtocolType.SFTP -> "Connect to Linux, Mac, or SSH server"
+                                        ProtocolType.FTPS -> "Encrypted transfer to secure FTP host"
+                                        ProtocolType.FTP -> "Local NAS, router, or FTP server"
+                                        ProtocolType.WEBDAV -> "Nextcloud, ownCloud, or WebDAV drive"
+                                        ProtocolType.SMB -> "Windows PC shared folder or NAS"
+                                        else -> "Connect to ${quickProto.displayName} server"
+                                    },
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            TextButton(
+                                onClick = {
+                                    quickInput = when (quickProto) {
+                                        ProtocolType.SFTP -> "192.168.1.100:22"
+                                        ProtocolType.FTPS -> "192.168.1.100:2122"
+                                        ProtocolType.FTP -> "192.168.1.100:2121"
+                                        ProtocolType.WEBDAV -> "192.168.1.100:8080"
+                                        ProtocolType.SMB -> "192.168.1.100/SharedFolder"
+                                        else -> "192.168.1.100:${quickProto.defaultPort}"
+                                    }
+                                },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            ) {
+                                Text("Fill Example", style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -388,7 +509,34 @@ fun HomeScreen(
                         OutlinedTextField(
                             value = quickInput,
                             onValueChange = { quickInput = it },
-                            label = { Text("host or protocol://user@host:port") },
+                            label = { Text("${quickProto.displayName} Host / IP") },
+                            placeholder = {
+                                Text(
+                                    text = when (quickProto) {
+                                        ProtocolType.SFTP -> "192.168.1.100:22"
+                                        ProtocolType.FTPS -> "192.168.1.100:2122"
+                                        ProtocolType.FTP -> "192.168.1.100:2121"
+                                        ProtocolType.WEBDAV -> "192.168.1.100:8080"
+                                        ProtocolType.SMB -> "192.168.1.100/share"
+                                        else -> "192.168.1.100:${quickProto.defaultPort}"
+                                    },
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                )
+                            },
+                            prefix = {
+                                Text(
+                                    text = "${quickProto.scheme}://",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            },
+                            trailingIcon = {
+                                if (quickInput.isNotBlank()) {
+                                    IconButton(onClick = { quickInput = "" }) {
+                                        Icon(Icons.Outlined.Clear, contentDescription = "Clear")
+                                    }
+                                }
+                            },
                             singleLine = true,
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
@@ -402,8 +550,33 @@ fun HomeScreen(
                                 }
                             },
                             shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.defaultMinSize(minWidth = 72.dp),
                         ) {
                             Text("Go")
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "Need username or password?",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        TextButton(
+                            onClick = onOpenConnections,
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                        ) {
+                            Icon(
+                                Icons.Outlined.AddCircleOutline,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("New Profile", style = MaterialTheme.typography.labelMedium)
                         }
                     }
                 }
