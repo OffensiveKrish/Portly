@@ -120,6 +120,7 @@ internal data class HttpsDeviceInfo(
     val freeFormatted: String,
     val usedFormatted: String,
     val usedPercent: Int,
+    val hasStorageAccess: Boolean = true,
 )
 
 private data class HttpsSessionRecord(
@@ -704,6 +705,35 @@ internal class KtorHttpsProtocolServer(
         return if (rem > 0L) ((rem + 999L) / 1000L) else 0L
     }
 
+    private fun getEffectiveRootDir(config: ServerConfig): File {
+        val configured = File(config.rootDirectoryPath)
+        val ext = runCatching { android.os.Environment.getExternalStorageDirectory() }.getOrNull()
+        if (config.rootTreeUriString.isNullOrBlank()) {
+            if (config.rootDirectoryPath.contains("PortlyShare") ||
+                config.rootDirectoryPath.contains("com.portly") ||
+                !configured.exists()
+            ) {
+                if (ext != null && ext.exists() && ext.canRead()) {
+                    return ext
+                }
+            }
+        }
+        return configured.apply { mkdirs() }
+    }
+
+    private fun resolveVirtualFile(root: File, virtualPath: String): File? {
+        val direct = PathValidator.canonicalizeUnderRoot(root, virtualPath).getOrNull()
+        if (direct != null && direct.exists()) return direct
+        val norm = PathValidator.normalizeRemotePath(virtualPath)
+        if (norm.equals("/Downloads", ignoreCase = true) || norm.equals("/Download", ignoreCase = true)) {
+            val dl = File(root, "Download")
+            if (dl.exists()) return dl
+            val dls = File(root, "Downloads")
+            if (dls.exists()) return dls
+        }
+        return direct
+    }
+
     private fun listDirectory(config: ServerConfig, virtualPath: String): List<HttpsFileEntryDto>? {
         val norm = PathValidator.normalizeRemotePath(virtualPath)
         val treeUri = config.rootTreeUriString?.takeIf { it.isNotBlank() }?.let(Uri::parse)
@@ -717,8 +747,8 @@ internal class KtorHttpsProtocolServer(
                 HttpsFileEntryDto(name, PathValidator.joinRemotePath(norm, name), child.isDirectory, size, Formatters.formatBytes(size), mod, Formatters.formatTimestamp(mod))
             }.sortedWith(compareBy<HttpsFileEntryDto> { !it.isDirectory }.thenBy { it.name.lowercase() })
         } else {
-            val root = File(config.rootDirectoryPath).apply { mkdirs() }
-            val dir = PathValidator.canonicalizeUnderRoot(root, virtualPath).getOrNull() ?: return null
+            val root = getEffectiveRootDir(config)
+            val dir = resolveVirtualFile(root, virtualPath) ?: return null
             if (!dir.exists() || !dir.isDirectory) return null
             (dir.listFiles() ?: emptyArray()).map { file ->
                 val size = if (file.isDirectory) 0L else file.length()
@@ -731,8 +761,8 @@ internal class KtorHttpsProtocolServer(
     private fun searchDirectory(config: ServerConfig, startPath: String, query: String): List<HttpsFileEntryDto>? {
         if (query.isBlank()) return listDirectory(config, startPath)
         val q = query.lowercase()
-        val root = File(config.rootDirectoryPath).apply { mkdirs() }
-        val start = PathValidator.canonicalizeUnderRoot(root, startPath).getOrNull() ?: return null
+        val root = getEffectiveRootDir(config)
+        val start = resolveVirtualFile(root, startPath) ?: return null
         val results = mutableListOf<HttpsFileEntryDto>()
         val queue = ArrayDeque<Pair<File, String>>()
         queue.addLast(start to PathValidator.normalizeRemotePath(startPath))
@@ -767,8 +797,8 @@ internal class KtorHttpsProtocolServer(
             call.response.header(HttpHeaders.ContentDisposition, "attachment; filename=\"${PathValidator.sanitizeFileName(doc.name ?: "file")}\"")
             streamInputWithRange(call, input, doc.length(), ip, username, reqPath)
         } else {
-            val root = File(config.rootDirectoryPath)
-            val target = PathValidator.canonicalizeUnderRoot(root, reqPath).getOrNull() ?: run {
+            val root = getEffectiveRootDir(config)
+            val target = resolveVirtualFile(root, reqPath) ?: run {
                 call.respond(HttpStatusCode.Forbidden, "Path traversal blocked")
                 return
             }
@@ -828,8 +858,8 @@ internal class KtorHttpsProtocolServer(
 
     private suspend fun handleUpload(call: ApplicationCall, config: ServerConfig, username: String, dirPath: String) {
         val ip = clientIp(call)
-        val root = File(config.rootDirectoryPath).apply { mkdirs() }
-        val targetLocalDir = PathValidator.canonicalizeUnderRoot(root, dirPath).getOrNull() ?: run {
+        val root = getEffectiveRootDir(config)
+        val targetLocalDir = resolveVirtualFile(root, dirPath) ?: run {
             call.respond(HttpStatusCode.Forbidden, "Unsafe upload directory")
             return
         }
@@ -873,15 +903,15 @@ internal class KtorHttpsProtocolServer(
     }
 
     private fun createFolder(config: ServerConfig, parentPath: String, name: String): Boolean {
-        val root = File(config.rootDirectoryPath).apply { mkdirs() }
-        val parent = PathValidator.canonicalizeUnderRoot(root, parentPath).getOrNull() ?: return false
+        val root = getEffectiveRootDir(config)
+        val parent = resolveVirtualFile(root, parentPath) ?: return false
         val target = PathValidator.canonicalizeUnderRoot(parent, PathValidator.sanitizeFileName(name)).getOrNull() ?: return false
         return target.mkdirs() || target.isDirectory
     }
 
     private fun renameItem(config: ServerConfig, path: String, newName: String): Boolean {
-        val root = File(config.rootDirectoryPath)
-        val src = PathValidator.canonicalizeUnderRoot(root, path).getOrNull() ?: return false
+        val root = getEffectiveRootDir(config)
+        val src = resolveVirtualFile(root, path) ?: return false
         if (src == root.canonicalFile) return false
         val dest = File(src.parentFile, PathValidator.sanitizeFileName(newName))
         PathValidator.canonicalizeUnderRoot(root, dest.relativeTo(root.canonicalFile).path).getOrNull() ?: return false
@@ -889,8 +919,8 @@ internal class KtorHttpsProtocolServer(
     }
 
     private fun deleteItem(config: ServerConfig, path: String): Boolean {
-        val root = File(config.rootDirectoryPath)
-        val target = PathValidator.canonicalizeUnderRoot(root, path).getOrNull() ?: return false
+        val root = getEffectiveRootDir(config)
+        val target = resolveVirtualFile(root, path) ?: return false
         if (target == root.canonicalFile) return false
         return target.deleteRecursively()
     }
@@ -898,13 +928,20 @@ internal class KtorHttpsProtocolServer(
     private fun getDeviceInfo(): HttpsDeviceInfo {
         val model = "${android.os.Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${android.os.Build.MODEL}"
         val osVer = "Android ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})"
-        val rootPath = currentConfig?.rootDirectoryPath ?: android.os.Environment.getExternalStorageDirectory().path
+        val ext = runCatching { android.os.Environment.getExternalStorageDirectory() }.getOrNull()
+        val root = currentConfig?.let { getEffectiveRootDir(it) } ?: ext
+        val rootPath = root?.absolutePath ?: ext?.path ?: "/"
         val stat = runCatching { android.os.StatFs(rootPath) }.getOrNull()
             ?: runCatching { android.os.StatFs(android.os.Environment.getExternalStorageDirectory().path) }.getOrNull()
         val total = stat?.totalBytes ?: (128L * 1024 * 1024 * 1024)
         val free = stat?.availableBytes ?: (64L * 1024 * 1024 * 1024)
         val used = (total - free).coerceAtLeast(0L)
         val pct = if (total > 0L) ((used * 100) / total).toInt() else 0
+        val hasAccess = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            android.os.Environment.isExternalStorageManager()
+        } else {
+            ext?.canRead() ?: true
+        }
         return HttpsDeviceInfo(
             deviceName = model,
             androidVersion = osVer,
@@ -916,6 +953,7 @@ internal class KtorHttpsProtocolServer(
             freeFormatted = Formatters.formatBytes(free),
             usedFormatted = Formatters.formatBytes(used),
             usedPercent = pct,
+            hasStorageAccess = hasAccess,
         )
     }
 
@@ -938,8 +976,8 @@ internal class KtorHttpsProtocolServer(
             call.response.header(HttpHeaders.ContentType, mimeType.toString())
             streamInputWithRange(call, input, doc.length(), ip, username, reqPath)
         } else {
-            val root = File(config.rootDirectoryPath)
-            val target = PathValidator.canonicalizeUnderRoot(root, reqPath).getOrNull() ?: run {
+            val root = getEffectiveRootDir(config)
+            val target = resolveVirtualFile(root, reqPath) ?: run {
                 call.respond(HttpStatusCode.Forbidden, "Path traversal blocked")
                 return
             }
@@ -958,13 +996,13 @@ internal class KtorHttpsProtocolServer(
 
     private suspend fun serveZipDownload(call: ApplicationCall, config: ServerConfig, username: String, paths: List<String>) {
         val ip = clientIp(call)
-        val root = File(config.rootDirectoryPath)
+        val root = getEffectiveRootDir(config)
         val tempDir = context?.cacheDir ?: File(System.getProperty("java.io.tmpdir") ?: ".")
         val tempZip = File.createTempFile("portly_export_", ".zip", tempDir)
         try {
             java.util.zip.ZipOutputStream(tempZip.outputStream().buffered(ChecksumUtils.STREAM_BUFFER_SIZE)).use { zos ->
                 for (p in paths) {
-                    val file = PathValidator.canonicalizeUnderRoot(root, p).getOrNull() ?: continue
+                    val file = resolveVirtualFile(root, p) ?: continue
                     if (!file.exists()) continue
                     addEntryToZip(zos, file, file.name)
                 }

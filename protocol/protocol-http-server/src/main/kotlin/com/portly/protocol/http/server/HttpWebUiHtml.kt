@@ -703,6 +703,19 @@ internal object HttpWebUiHtml {
             background: rgba(255, 87, 34, 0.04);
         }
 
+        .permission-banner {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            background: rgba(255, 171, 0, 0.15);
+            border: 1px solid rgba(255, 171, 0, 0.4);
+            color: var(--text-main);
+            margin-bottom: 14px;
+            font-size: 13px;
+        }
+
         /* File Table (List View) */
         .table-wrap {
             background: var(--bg-surface);
@@ -1024,6 +1037,15 @@ internal object HttpWebUiHtml {
             <button type="button" class="filter-pill" onclick="setCategoryFilter('ARCHIVE', this)">📦 Archives</button>
         </div>
 
+        <!-- Permission Notice Banner -->
+        <div id="permissionNotice" class="permission-banner" style="display: none;">
+            <span style="font-size: 20px;">⚠️</span>
+            <div style="flex: 1;">
+                <strong>Device Storage Access Required:</strong>
+                All Files Access has not been granted on this Android device yet. To view and manage device files, please open the Portly app on your phone and tap <strong>Grant</strong> in the Servers tab.
+            </div>
+        </div>
+
         <!-- Drag & Drop Zone -->
         ${if (!readOnly) """
         <div class="dropzone-hero" id="dropzone" onclick="document.getElementById('filePicker').click()">
@@ -1162,6 +1184,10 @@ internal object HttpWebUiHtml {
                     document.getElementById('deviceModelText').textContent = info.deviceName || 'Android Storage';
                     document.getElementById('storageBarFill').style.width = (info.usedPercent || 0) + '%';
                     document.getElementById('storageSummaryText').textContent = info.freeFormatted + ' free of ' + info.totalFormatted;
+                    const warn = document.getElementById('permissionNotice');
+                    if (warn) {
+                        warn.style.display = (info.hasStorageAccess === false) ? 'flex' : 'none';
+                    }
                 }
             } catch(e) {}
         }
@@ -1301,7 +1327,10 @@ internal object HttpWebUiHtml {
         function renderTableView() {
             const tb = document.getElementById('tableBody');
             if (filteredEntries.length === 0) {
-                tb.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 32px; color: var(--text-muted);">No matching files found.</td></tr>';
+                const emptyMsg = (rawEntries.length === 0 && currentPath === '/')
+                    ? 'Folder is empty. Upload files or folders to get started.'
+                    : 'No matching files found.';
+                tb.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 32px; color: var(--text-muted);">' + emptyMsg + '</td></tr>';
                 return;
             }
             let html = '';
@@ -1337,7 +1366,10 @@ internal object HttpWebUiHtml {
         function renderGridView() {
             const g = document.getElementById('gridViewContainer');
             if (filteredEntries.length === 0) {
-                g.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 48px; color: var(--text-muted);">No matching files found.</div>';
+                const emptyMsg = (rawEntries.length === 0 && currentPath === '/')
+                    ? 'Folder is empty. Upload files or folders to get started.'
+                    : 'No matching files found.';
+                g.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 48px; color: var(--text-muted);">' + emptyMsg + '</div>';
                 return;
             }
             let html = '';

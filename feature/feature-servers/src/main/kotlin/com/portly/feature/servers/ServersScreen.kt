@@ -560,6 +560,41 @@ fun ServersScreen(
                                 }
                             }
                         }
+                        val hasStoragePerm = Build.VERSION.SDK_INT < Build.VERSION_CODES.R ||
+                            android.os.Environment.isExternalStorageManager()
+                        if (!hasStoragePerm) {
+                            item {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                                    shape = MaterialTheme.shapes.medium,
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                    ) {
+                                        Text(
+                                            text = "Grant All Files Access so web browsers and FTP clients can view and manage internal storage.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                            modifier = Modifier.weight(1f).padding(end = 8.dp),
+                                        )
+                                        Button(
+                                            onClick = {
+                                                val intent = Intent(
+                                                    AndroidSettings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                                                    Uri.parse("package:${context.packageName}"),
+                                                )
+                                                context.startActivity(intent)
+                                            },
+                                        ) {
+                                            Text("Grant")
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         val visibleServers = ServerType.entries.filter { serverType ->
                             if (settings.hideLegacyUnencryptedServers) {
                                 serverType == ServerType.FTPS || serverType == ServerType.HTTPS

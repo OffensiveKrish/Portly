@@ -51,7 +51,10 @@ class PortlyServerManager @Inject constructor(
         get() = File(context.noBackupFilesDir, "server_configs.json")
 
     private val defaultShareDir: File
-        get() = File(context.filesDir, "PortlyShare").apply { mkdirs() }
+        get() {
+            val ext = runCatching { android.os.Environment.getExternalStorageDirectory() }.getOrNull()
+            return if (ext != null && ext.exists()) ext else File(context.filesDir, "PortlyShare").apply { mkdirs() }
+        }
 
     private val servers: Map<ServerType, ProtocolServer?> = ServerType.entries.associateWith { type ->
         serverFactories[type]?.create()
@@ -197,10 +200,25 @@ class PortlyServerManager @Inject constructor(
         if (!configFile.exists()) return base
         runCatching {
             val stored = json.decodeFromString<Map<String, ServerConfig>>(configFile.readText())
+            var needsPersist = false
             for ((k, v) in stored) {
                 runCatching { ServerType.valueOf(k) }.getOrNull()?.let { type ->
-                    base[type] = v
+                    val isLegacyInternal = v.rootTreeUriString.isNullOrBlank() && (
+                        v.rootDirectoryPath.contains("PortlyShare") ||
+                        v.rootDirectoryPath.contains(context.packageName) ||
+                        !File(v.rootDirectoryPath).exists()
+                    )
+                    val updated = if (isLegacyInternal) {
+                        needsPersist = true
+                        v.copy(rootDirectoryPath = defaultShareDir.absolutePath)
+                    } else {
+                        v
+                    }
+                    base[type] = updated
                 }
+            }
+            if (needsPersist) {
+                persistConfigs(base)
             }
         }
         return base
