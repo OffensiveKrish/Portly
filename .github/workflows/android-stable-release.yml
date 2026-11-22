@@ -115,8 +115,8 @@ jobs:
           SHA256_APK=$(sha256sum "$APK_CANONICAL" | awk '{print $1}')
           echo "SHA256=${SHA256_APK}" >> $GITHUB_OUTPUT
           
-          # Verify APK signature and extract certificate fingerprint
-          CERT_FINGERPRINT=$("${ANDROID_HOME}/build-tools/35.0.0/apksigner" verify --print-certs "$APK_CANONICAL" | grep "SHA-256 digest:" | head -n 1 | awk '{print $3}' || echo "")
+          # Verify APK signature and extract certificate fingerprint (print last field, which is the hex digest)
+          CERT_FINGERPRINT=$("${ANDROID_HOME}/build-tools/35.0.0/apksigner" verify --print-certs "$APK_CANONICAL" | grep "SHA-256 digest:" | head -n 1 | awk '{print $NF}' || echo "")
           echo "CERT_FINGERPRINT=${CERT_FINGERPRINT}" >> $GITHUB_OUTPUT
           
           # Extract exact build metadata

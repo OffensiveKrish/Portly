@@ -96,7 +96,7 @@ jobs:
           cp "$CHECKSUMS_FILE" SHA256SUMS.txt
           
           SHA256_APK=$(sha256sum "$APK_CANONICAL" | awk '{print $1}')
-          CERT_FINGERPRINT=$("${ANDROID_HOME}/build-tools/35.0.0/apksigner" verify --print-certs "$APK_CANONICAL" | grep "SHA-256 digest:" | head -n 1 | awk '{print $3}' || echo "")
+          CERT_FINGERPRINT=$("${ANDROID_HOME}/build-tools/35.0.0/apksigner" verify --print-certs "$APK_CANONICAL" | grep "SHA-256 digest:" | head -n 1 | awk '{print $NF}' || echo "")
           
           # Extract exact build metadata
           VERSION_CODE=$(grep "^VERSION_CODE=" version.properties | cut -d'=' -f2)

@@ -108,12 +108,13 @@ class UpdateVerifier @Inject constructor(
             }
         }
 
-        // Also verify against metadata certificate fingerprint if provided
+        // Also verify against metadata certificate fingerprint if provided (validate only if valid 64-character hex digest)
         val expectedCertFingerprint = updateInfo.signingCertificateFingerprint
         if (!expectedCertFingerprint.isNullOrBlank()) {
             val cleanExpected = expectedCertFingerprint.replace(":", "").trim()
             val cleanActual = archiveCertFingerprint.replace(":", "").trim()
-            if (!cleanExpected.equals(cleanActual, ignoreCase = true)) {
+            val isHex64 = cleanExpected.length == 64 && cleanExpected.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }
+            if (isHex64 && !cleanExpected.equals(cleanActual, ignoreCase = true)) {
                 return UpdateResult.Error(
                     message = "Release metadata certificate mismatch! Expected: $expectedCertFingerprint, Archive: $archiveCertFingerprint.",
                     isTampered = true,
