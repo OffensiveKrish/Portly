@@ -1,3 +1,5 @@
+import java.io.FileInputStream
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -7,6 +9,15 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+val versionPropsFile = rootProject.file("version.properties")
+val versionProps = Properties().apply {
+    if (versionPropsFile.exists()) {
+        FileInputStream(versionPropsFile).use { load(it) }
+    }
+}
+val appVersionName: String = versionProps.getProperty("VERSION_NAME", "2026.11.0")
+val appVersionCode: Int = versionProps.getProperty("VERSION_CODE", "202611000").toInt()
+
 android {
     namespace = "com.portly.app"
     compileSdk = 37
@@ -15,8 +26,8 @@ android {
         applicationId = "com.portly.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
 
         buildConfigField("String", "GITHUB_REPO_OWNER", "\"OffensiveKrish\"")
         buildConfigField("String", "GITHUB_REPO_NAME", "\"Portly\"")

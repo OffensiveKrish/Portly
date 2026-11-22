@@ -1,7 +1,27 @@
 # Changelog
 
 All notable changes to the **Portly** project are documented in this file.
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+Starting with November 2026, Portly officially follows **Calendar Versioning (CalVer)** in the format `YYYY.MM.PATCH`.
+
+---
+
+## [2026.11.0] - 2026-11-22
+
+### Added
+- **Centralized CalVer Management**: Adopted `YYYY.MM.PATCH` (e.g. `2026.11.0`) with monotonically increasing integer `versionCode` (`202611000`) defined in `version.properties`.
+- **GPL-3.0 Source Archive Automation**: Automated `Portly-YYYY.MM.PATCH-source.zip` packaging in GitHub Actions for full licensing compliance.
+- **Enhanced Quick Connect Experience**:
+  - Interactive protocol selector with default port indicators (SFTP: 22, FTPS: 2122, FTP: 2121, WebDAV: 8080, SMB: 445).
+  - Dynamic protocol prefix pinned in the input field (`sftp://`, `ftps://`, `ftp://`, `http://`, `smb://`).
+  - One-tap "Fill Example" button and instant Clear (`X`) button.
+  - "New Profile" shortcut for configuring servers requiring username/password or SSH keys.
+- **Cellular & Wi-Fi Data Tips**: Informational banner guiding users when cellular data is active for PC file transfers.
+
+### Fixed
+- **Excessive Top Status Bar Spacing**: Removed redundant nested `Scaffold` hierarchy in `MainActivity.kt` that was causing double status bar inset padding across Files, Connections, Servers, History, and Settings.
+- **Official GitHub Update Repository**: Corrected default repository from placeholder `upgrdify/portly` to official `OffensiveKrish/Portly`, fixing HTTP 404 update errors.
+- **Dynamic Version Consistency**: Replaced hardcoded "Version 2.0" in About & Support menu with dynamic `versionName` reflection across the entire application.
 
 ---
 

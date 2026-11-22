@@ -128,11 +128,14 @@ class UpdateGitHubClient @Inject constructor() {
                     ?: apkAsset?.get("size")?.jsonPrimitive?.longOrNull
                     ?: 0L
 
-                // If SHA256SUMS.txt exists and hash wasn't in metadata, try fetching it
+                // If checksums file exists and hash wasn't in metadata, try fetching it
                 var sha256 = parsedMetadata?.apkSha256
                 if (sha256.isNullOrBlank()) {
                     val checksumsAsset = assets.firstOrNull {
-                        it["name"]?.jsonPrimitive?.contentOrNull.equals("SHA256SUMS.txt", ignoreCase = true)
+                        val name = it["name"]?.jsonPrimitive?.contentOrNull ?: ""
+                        name.equals("SHA256SUMS.txt", ignoreCase = true) ||
+                            name.endsWith("-checksums.txt", ignoreCase = true) ||
+                            name.endsWith("checksums.txt", ignoreCase = true)
                     }
                     if (checksumsAsset != null) {
                         val checksumUrl = checksumsAsset["browser_download_url"]?.jsonPrimitive?.contentOrNull

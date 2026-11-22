@@ -51,7 +51,8 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class TransferEngineTest {
 
-    @get:Rule
+    @Rule
+    @JvmField
     val tempFolder = TemporaryFolder()
 
     private val testScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -349,9 +350,10 @@ class TransferEngineTest {
                 list.count { it.spec.groupId == groupId && it.status == TransferStatus.COMPLETED } == 2
             }
         }
+        println("DEBUG: fakeClient.files keys = ${fakeClient.files.keys}")
         assertEquals(2, all.count { it.spec.groupId == groupId })
-        assertEquals("one", String(fakeClient.files["/uploads/a.txt"]!!))
-        assertEquals("two", String(fakeClient.files["/uploads/sub/b.txt"]!!))
+        assertEquals("one", String(fakeClient.files["/uploads/a.txt"] ?: error("Missing /uploads/a.txt in ${fakeClient.files.keys}")))
+        assertEquals("two", String(fakeClient.files["/uploads/sub/b.txt"] ?: error("Missing /uploads/sub/b.txt in ${fakeClient.files.keys}")))
     }
 
     private fun createEngine(

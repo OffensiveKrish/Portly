@@ -56,14 +56,19 @@ class UpdateManager @Inject constructor(
     }
 
     fun checkForUpdates(
-        repo: String = "upgrdify/portly",
+        repo: String = "OffensiveKrish/Portly",
         channel: ReleaseChannel = ReleaseChannel.STABLE,
         onResult: ((UpdateInfo?) -> Unit)? = null,
     ) {
+        val targetRepo = if (repo.isBlank() || repo.equals("upgrdify/portly", ignoreCase = true)) {
+            "OffensiveKrish/Portly"
+        } else {
+            repo
+        }
         _status.value = UpdateStatus.Checking
         scope.launch(Dispatchers.IO) {
             val result = gitHubClient.fetchLatestUpdate(
-                repo = repo,
+                repo = targetRepo,
                 channel = channel,
                 currentVersionCode = currentVersionCode,
             )

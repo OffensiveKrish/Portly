@@ -177,7 +177,7 @@ enum class SettingsCategory(
     ),
     ABOUT(
         title = "About & Support",
-        subtitle = "Version 2.0, feedback & bug report, privacy policy",
+        subtitle = "App version, feedback & bug report, privacy policy",
         icon = Icons.Outlined.Info,
         accentColor = Color(0xFF94A3B8), // Slate
     ),
@@ -230,8 +230,13 @@ class SettingsViewModel @Inject constructor(
     fun setUpdateReleaseChannel(channel: ReleaseChannel) = viewModelScope.launch { settingsStore.setUpdateReleaseChannel(channel) }
     fun setNotifyOnUpdate(enabled: Boolean) = viewModelScope.launch { settingsStore.setNotifyOnUpdate(enabled) }
     fun setCustomGitHubRepo(repo: String) = viewModelScope.launch {
-        settingsStore.setCustomGitHubRepo(repo)
-        _statusMessage.value = "GitHub repository updated: $repo"
+        val target = if (repo.isBlank() || repo.equals("upgrdify/portly", ignoreCase = true)) {
+            "OffensiveKrish/Portly"
+        } else {
+            repo.trim()
+        }
+        settingsStore.setCustomGitHubRepo(target)
+        _statusMessage.value = "GitHub repository updated: $target"
     }
 
     // Appearance
@@ -520,6 +525,7 @@ fun SettingsScreen(
                         val cat = SettingsCategory.entries[idx]
                         SettingsCategoryItem(
                             category = cat,
+                            versionName = viewModel.updateManager.currentVersionName,
                             onClick = { selectedCategory = cat.name },
                         )
                     }
@@ -1633,7 +1639,7 @@ fun SettingsScreen(
         TextEditDialog(
             title = "GitHub Repository",
             initialValue = settings.customGitHubRepo,
-            placeholder = "owner/repo (e.g. upgrdify/portly)",
+            placeholder = "owner/repo (e.g. OffensiveKrish/Portly)",
             onConfirm = {
                 viewModel.setCustomGitHubRepo(it)
                 showRepoEditDialog = false
@@ -1646,6 +1652,7 @@ fun SettingsScreen(
 @Composable
 private fun SettingsCategoryItem(
     category: SettingsCategory,
+    versionName: String = "",
     onClick: () -> Unit,
 ) {
     Card(
@@ -1682,7 +1689,11 @@ private fun SettingsCategoryItem(
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = category.subtitle,
+                    text = if (category == SettingsCategory.ABOUT && versionName.isNotBlank()) {
+                        "v$versionName, feedback & bug report, privacy policy"
+                    } else {
+                        category.subtitle
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

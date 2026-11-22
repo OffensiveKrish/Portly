@@ -167,7 +167,9 @@ class PortlySettingsDataStore @Inject constructor(
             notifyOnUpdate = prefs[Keys.NOTIFY_ON_UPDATE] ?: true,
             lastUpdateCheckTimestamp = prefs[Keys.LAST_UPDATE_CHECK_TIMESTAMP] ?: 0L,
             ignoredUpdateVersionCode = prefs[Keys.IGNORED_UPDATE_VERSION_CODE] ?: 0L,
-            customGitHubRepo = prefs[Keys.CUSTOM_GITHUB_REPO] ?: "upgrdify/portly",
+            customGitHubRepo = prefs[Keys.CUSTOM_GITHUB_REPO]?.takeIf {
+                it.isNotBlank() && !it.equals("upgrdify/portly", ignoreCase = true)
+            } ?: "OffensiveKrish/Portly",
         )
     }
 
