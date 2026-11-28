@@ -1,8 +1,13 @@
-# Portly — Connect. Transfer. Manage. Anywhere.
-
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![Android CI](https://github.com/OffensiveKrish/Portly/actions/workflows/android-ci.yml/badge.svg)](https://github.com/OffensiveKrish/Portly/actions/workflows/android-ci.yml)
-[![Min Android SDK](https://img.shields.io/badge/Android-8.0%2B%20(API%2026)-green.svg)](https://developer.android.com)
+<div align="center">
+  <img src="core/core-ui/src/main/res/drawable/ic_portly_logo.png" alt="Portly Logo" width="112" height="112" />
+  <h1>Portly</h1>
+  <p><strong>Connect. Transfer. Manage. Anywhere.</strong></p>
+  <p>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3" /></a>
+    <a href="https://github.com/OffensiveKrish/Portly/actions/workflows/android-ci.yml"><img src="https://github.com/OffensiveKrish/Portly/actions/workflows/android-ci.yml/badge.svg" alt="Android CI" /></a>
+    <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Android-8.0%2B%20(API%2026)-green.svg" alt="Min Android SDK" /></a>
+  </p>
+</div>
 
 **Portly** is a modern, enterprise-grade, privacy-respecting Android application for local server hosting, remote protocol access, full-featured file management, and secure file transfers.
 

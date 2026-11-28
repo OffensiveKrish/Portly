@@ -14,6 +14,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -46,9 +47,11 @@ import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.CloudDownload
+import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.outlined.FolderOpen
@@ -66,6 +69,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -90,15 +94,18 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -120,6 +127,8 @@ import com.portly.core.model.UpdateStatus
 import com.portly.core.security.BiometricAuthHelper
 import com.portly.core.security.BiometricAvailability
 import com.portly.core.security.EnterprisePolicyManager
+import com.portly.core.ui.R as CoreUiR
+import com.portly.core.ui.theme.PortlyBrand
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -1075,48 +1084,104 @@ fun SettingsScreen(
                             }
 
                             SettingsCategory.ABOUT -> {
+                                // Hero App Identity Card
                                 item {
                                     Card(
                                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                                        shape = RoundedCornerShape(16.dp),
+                                        shape = RoundedCornerShape(20.dp),
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(20.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(18.dp),
+                                        ) {
+                                            Image(
+                                                painter = painterResource(CoreUiR.drawable.ic_portly_logo),
+                                                contentDescription = "Portly Logo",
+                                                modifier = Modifier
+                                                    .size(64.dp)
+                                                    .clip(RoundedCornerShape(16.dp)),
+                                            )
+                                            Column(
+                                                modifier = Modifier.weight(1f),
+                                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                                            ) {
+                                                Text(
+                                                    text = "PORTLY",
+                                                    style = MaterialTheme.typography.headlineSmall,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                )
+                                                Text(
+                                                    text = "Connect. Transfer. Manage. Anywhere.",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                    Surface(
+                                                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                                        shape = RoundedCornerShape(8.dp),
+                                                    ) {
+                                                        Text(
+                                                            text = viewModel.updateManager.currentVersionName,
+                                                            style = MaterialTheme.typography.labelMedium,
+                                                            fontWeight = FontWeight.SemiBold,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                                        )
+                                                    }
+                                                    Surface(
+                                                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                                        shape = RoundedCornerShape(8.dp),
+                                                    ) {
+                                                        Text(
+                                                            text = "UNIVERSAL",
+                                                            style = MaterialTheme.typography.labelMedium,
+                                                            fontWeight = FontWeight.SemiBold,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Installed Version & Updates Card
+                                item {
+                                    Card(
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                                        shape = RoundedCornerShape(20.dp),
                                         modifier = Modifier.fillMaxWidth(),
                                     ) {
                                         Column(
                                             modifier = Modifier.padding(16.dp),
                                             verticalArrangement = Arrangement.spacedBy(12.dp),
                                         ) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            ) {
-                                                Icon(
-                                                    Icons.Outlined.SystemUpdate,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                )
-                                                Text("Portly Updates & Distribution", style = MaterialTheme.typography.titleMedium)
-                                            }
-
                                             // Installed Version
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .defaultMinSize(minHeight = 44.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                            ) {
-                                                Column(modifier = Modifier.weight(1f)) {
-                                                    Text("Installed Version", style = MaterialTheme.typography.bodyLarge)
-                                                    Text(
-                                                        text = "Version ${viewModel.updateManager.currentVersionName} (Build ${viewModel.updateManager.currentVersionCode})",
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    )
-                                                }
+                                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                Text(
+                                                    text = "Installed Version",
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                )
+                                                Text(
+                                                    text = "Version ${viewModel.updateManager.currentVersionName} (Build ${viewModel.updateManager.currentVersionCode})",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
                                             }
 
                                             // Release Channel Selector
-                                            Text("Release Channel", style = MaterialTheme.typography.bodyMedium)
+                                            Text(
+                                                text = "Release Channel",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Medium,
+                                            )
                                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                                 FilterChip(
                                                     selected = settings.updateReleaseChannel == ReleaseChannel.STABLE,
@@ -1169,8 +1234,6 @@ fun SettingsScreen(
                                                 Text(lastCheckedText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                             }
 
-                                            HorizontalDivider()
-
                                             // Update Status & Action Block
                                             when (val state = updateStatus) {
                                                 is UpdateStatus.Idle -> {
@@ -1195,7 +1258,7 @@ fun SettingsScreen(
                                                 }
                                                 is UpdateStatus.UpToDate -> {
                                                     Column(
-                                                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                                                        verticalArrangement = Arrangement.spacedBy(12.dp),
                                                         modifier = Modifier.fillMaxWidth(),
                                                     ) {
                                                         Row(
@@ -1205,16 +1268,16 @@ fun SettingsScreen(
                                                             Icon(
                                                                 Icons.Outlined.CheckCircle,
                                                                 contentDescription = null,
-                                                                tint = MaterialTheme.colorScheme.primary,
+                                                                tint = PortlyBrand.StatusActiveGreen,
                                                             )
                                                             Text(
                                                                 "Portly is up to date!",
                                                                 style = MaterialTheme.typography.bodyMedium,
                                                                 fontWeight = FontWeight.SemiBold,
-                                                                color = MaterialTheme.colorScheme.primary,
+                                                                color = PortlyBrand.StatusActiveGreen,
                                                             )
                                                         }
-                                                        OutlinedButton(
+                                                        Button(
                                                             onClick = viewModel::checkForUpdates,
                                                             modifier = Modifier.fillMaxWidth(),
                                                         ) {
@@ -1428,17 +1491,27 @@ fun SettingsScreen(
                                     }
                                 }
 
+                                // App Details & Support Section Header
+                                item {
+                                    Text(
+                                        text = "App Details & Support",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(top = 4.dp, start = 4.dp),
+                                    )
+                                }
+
                                 item {
                                     Card(
                                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                                        shape = RoundedCornerShape(16.dp),
+                                        shape = RoundedCornerShape(20.dp),
                                         modifier = Modifier.fillMaxWidth(),
                                     ) {
                                         Column(
                                             modifier = Modifier.padding(16.dp),
                                             verticalArrangement = Arrangement.spacedBy(12.dp),
                                         ) {
-                                            Text("App Details & Support", style = MaterialTheme.typography.titleMedium)
                                             Row(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
@@ -1468,7 +1541,10 @@ fun SettingsScreen(
                                                 onClick = {
                                                     val intent = Intent(Intent.ACTION_SENDTO).apply {
                                                         data = Uri.parse("mailto:support@portly.app")
-                                                        putExtra(Intent.EXTRA_SUBJECT, "Portly Feedback / Bug Report (v1.0.0)")
+                                                        putExtra(
+                                                            Intent.EXTRA_SUBJECT,
+                                                            "Portly Feedback / Bug Report (v${viewModel.updateManager.currentVersionName})",
+                                                        )
                                                         putExtra(
                                                             Intent.EXTRA_TEXT,
                                                             "Device: ${Build.MANUFACTURER} ${Build.MODEL}\nAndroid SDK: ${Build.VERSION.SDK_INT}\nApp Version: ${viewModel.updateManager.currentVersionName}\n\nIssue / Feedback:\n",
@@ -1490,6 +1566,109 @@ fun SettingsScreen(
                                             )
                                         }
                                     }
+                                }
+
+                                // Bottom Brand & Quick Links Card
+                                item {
+                                    Card(
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                                        shape = RoundedCornerShape(20.dp),
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(16.dp),
+                                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                            ) {
+                                                Image(
+                                                    painter = painterResource(CoreUiR.drawable.ic_portly_logo),
+                                                    contentDescription = "Portly Logo",
+                                                    modifier = Modifier
+                                                        .size(52.dp)
+                                                        .clip(RoundedCornerShape(14.dp)),
+                                                )
+                                                Column {
+                                                    Text(
+                                                        text = "Portly",
+                                                        style = MaterialTheme.typography.titleLarge,
+                                                        fontWeight = FontWeight.Bold,
+                                                    )
+                                                    Text(
+                                                        text = "GNU General Public License v3.0",
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    )
+                                                }
+                                            }
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                            ) {
+                                                FilledTonalButton(
+                                                    onClick = {
+                                                        val repo = settings.customGitHubRepo.ifBlank { "OffensiveKrish/Portly" }
+                                                        val intent = Intent(
+                                                            Intent.ACTION_VIEW,
+                                                            Uri.parse("https://github.com/$repo"),
+                                                        )
+                                                        runCatching { context.startActivity(intent) }
+                                                    },
+                                                    modifier = Modifier.weight(1f),
+                                                ) {
+                                                    Icon(
+                                                        Icons.Outlined.Code,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(18.dp),
+                                                    )
+                                                    Spacer(Modifier.width(8.dp))
+                                                    Text("GitHub")
+                                                }
+                                                FilledTonalButton(
+                                                    onClick = {
+                                                        val intent = Intent(Intent.ACTION_SENDTO).apply {
+                                                            data = Uri.parse("mailto:support@portly.app")
+                                                            putExtra(
+                                                                Intent.EXTRA_SUBJECT,
+                                                                "Portly Support (v${viewModel.updateManager.currentVersionName})",
+                                                            )
+                                                        }
+                                                        runCatching {
+                                                            context.startActivity(Intent.createChooser(intent, "Send Email"))
+                                                        }.onFailure {
+                                                            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                                            cm.setPrimaryClip(ClipData.newPlainText("Support Email", "support@portly.app"))
+                                                        }
+                                                    },
+                                                    modifier = Modifier.weight(1f),
+                                                ) {
+                                                    Icon(
+                                                        Icons.Outlined.Email,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(18.dp),
+                                                    )
+                                                    Spacer(Modifier.width(8.dp))
+                                                    Text("Email")
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Bottom Tagline
+                                item {
+                                    Text(
+                                        text = "Connect. Transfer. Manage. Anywhere.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 8.dp),
+                                    )
                                 }
                             }
                         }
