@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portly — Android Local Server Suite &amp; Multi-Protocol Storage Client</title>
+  <meta
+    name="description"
+    content="Portly is an open-source, offline-first Android application for local server hosting (FTP, FTPS, HTTP, HTTPS), multi-protocol remote storage (SFTP, FTPS, FTP, WebDAV, SMB), dual-pane file management, and hardware-encrypted transfers."
+  />
+  <meta
+    name="keywords"
+    content="Portly, Android FTP server, Android FTPS server, Android HTTPS file server, SFTP client Android, SMB3 WebDAV Android, open source file manager, AndroidKeyStore, GPLv3"
+  />
+  <meta name="author" content="OffensiveKrish" />
+  <meta name="theme-color" content="#0B0F17" />
+  <link rel="canonical" href="https://offensivekrish.github.io/Portly/" />
+  <link rel="icon" type="image/png" href="./assets/ic_portly_logo.png" />
+  <link rel="apple-touch-icon" href="./assets/ic_portly_logo.png" />
+
+  <!-- Open Graph / Social -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://offensivekrish.github.io/Portly/" />
+  <meta property="og:title" content="Portly — Connect. Transfer. Manage. Anywhere." />
+  <meta
+    property="og:description"
+    content="Open-source Android local server suite (FTP/FTPS/HTTP/HTTPS) and multi-protocol remote client (SFTP/FTPS/FTP/WebDAV/SMB) with AES-256-GCM Keystore security and zero telemetry."
+  />
+  <meta property="og:image" content="https://offensivekrish.github.io/Portly/assets/ic_portly_logo.png" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Portly — Connect. Transfer. Manage. Anywhere." />
+  <meta
+    name="twitter:description"
+    content="Host FTPS/HTTPS servers on Android and connect to SFTP, SMB3, WebDAV, and FTPS storage with zero trackers."
+  />
+  <meta name="twitter:image" content="https://offensivekrish.github.io/Portly/assets/ic_portly_logo.png" />
+
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container nav-inner">
+      <a href="#top" class="brand" aria-label="Portly Home">
+        <img src="./assets/ic_portly_logo.png" alt="Portly Logo" width="38" height="38" />
+        <span>Portly</span>
+        <span class="brand-badge">GPL-3.0</span>
+      </a>
+
+      <nav aria-label="Primary navigation">
+        <ul id="nav-links" class="nav-links">
+          <li><a href="#overview">Overview</a></li>
+          <li><a href="#modules">Modules</a></li>
+          <li><a href="#workflows">Workflows</a></li>
+          <li><a href="#security">Security</a></li>
+          <li><a href="#specs">Specs</a></li>
+          <li><a href="#docs">Docs</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <button id="theme-toggle" type="button" class="theme-btn" aria-label="Switch color theme">
+          <span aria-hidden="true">&#9681;</span>
+          <span id="theme-label">Dark</span>
+        </button>
+        <a
+          href="https://github.com/OffensiveKrish/Portly/releases"
+          class="btn btn-primary btn-sm"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Download APK
+        </a>
+        <button
+          id="menu-toggle"
+          type="button"
+          class="menu-toggle"
+          aria-label="Toggle navigation menu"
+          aria-expanded="false"
+          aria-controls="nav-links"
+        >
+          &#9776;
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <!-- Hero -->
+    <section id="top" class="hero">
+      <div class="container hero-grid">
+        <div>
+          <div class="hero-eyebrow">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span>Open-Source Android &bull; Version 2026.11.1 &bull; Zero Telemetry</span>
+          </div>
+          <h1>
+            <span class="gradient-text">Connect. Transfer.</span><br />
+            Manage. Anywhere.
+          </h1>
+          <p class="hero-lead">
+            Portly turns your Android device into both an embedded local file server suite
+            (<strong>FTP, FTPS, HTTP, HTTPS</strong>) and a multi-protocol remote storage client
+            (<strong>SFTP, FTPS, FTP, WebDAV, SMB</strong>) &mdash; with dual-pane file management,
+            offline media previews, and hardware-backed <strong>AES-256-GCM</strong> security.
+          </p>
+
+          <div class="hero-ctas">
+            <a
+              href="https://github.com/OffensiveKrish/Portly/releases"
+              class="btn btn-primary"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Download Universal APK
+            </a>
+            <a href="#modules" class="btn btn-secondary">Explore Modules</a>
+            <a
+              href="https://github.com/OffensiveKrish/Portly"
+              class="btn btn-secondary"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              GitHub Source
+            </a>
+          </div>
+
+          <div class="hero-facts">
+            <div class="fact-item">
+              <strong>9 Protocol Modules</strong>
+              <span>4 Servers + 5 Remote Clients</span>
+            </div>
+            <div class="fact-item">
+              <strong>Android 8.0 &ndash; 17</strong>
+              <span>API 26 min &bull; API 37 target</span>
+            </div>
+            <div class="fact-item">
+              <strong>Zero Trackers</strong>
+              <span>Offline-first &bull; GPL-3.0-or-later</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Android App Preview -->
+        <div class="device-showcase">
+          <div class="phone-frame" role="region" aria-label="Interactive Portly app preview">
+            <div class="phone-notch" aria-hidden="true"></div>
+            <div class="phone-screen">
+              <div>
+                <div class="phone-header">
+                  <div class="phone-brand">
+                    <img src="./assets/ic_portly_logo.png" alt="" width="24" height="24" />
+                    <span>Portly</span>
+                  </div>
+                  <span class="phone-pill">Keystore Locked</span>
+                </div>
+                <div id="phone-screen-body">
+                  <div class="phone-card">
+                    <div class="phone-card-title">LAN &amp; Connectivity</div>
+                    <div class="phone-card-sub">Wi-Fi Connected &bull; 192.168.1.42</div>
+                  </div>
+                  <div class="phone-card">
+                    <div class="phone-card-title">Quick Connect URI</div>
+                    <div class="phone-row"><span>sftp://nas.local:22/media</span><span class="badge-chip">SFTP</span></div>
+                  </div>
+                  <div class="phone-card">
+                    <div class="phone-card-title">Active Services</div>
+                    <div class="phone-row"><span>HTTPS Web Server (:8443)</span><span class="badge-chip badge-green">RUNNING</span></div>
+                    <div class="phone-row"><span>FTPS Server (:2122)</span><span class="badge-chip badge-green">TLS 1.3</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="phone-nav" aria-label="Preview app tabs">
+                <button type="button" class="phone-nav-btn active" data-screen="home">Home</button>
+                <button type="button" class="phone-nav-btn" data-screen="files">Files</button>
+                <button type="button" class="phone-nav-btn" data-screen="connect">Connect</button>
+                <button type="button" class="phone-nav-btn" data-screen="servers">Servers</button>
+                <button type="button" class="phone-nav-btn" data-screen="transfers">Transfers</button>
+              </div>
+            </div>
+          </div>
+          <span class="preview-caption">Click tabs inside the device preview to explore Portly&rsquo;s screens.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Product Overview -->
+    <section id="overview" class="section">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-kicker">Product Overview</span>
+          <h2>One Android workspace for local servers, remote storage, and verified transfers.</h2>
+          <p>
+            Built across 26 modular Gradle subprojects in Kotlin and Jetpack Compose, Portly replaces
+            fragmented FTP utilities, ad-supported file managers, and cloud relay apps with a single
+            auditable tool.
+          </p>
+        </div>
+
+        <div class="grid-3">
+          <article class="card">
+            <div class="card-icon" aria-hidden="true">&#9881;</div>
+            <h3>Direct LAN &amp; WAN Control</h3>
+            <p>
+              Communicate directly with your NAS, Linux SSH host, WebDAV server, or desktop browser.
+              No intermediary cloud relays, accounts, or proprietary sync daemons.
+            </p>
+            <div class="tag-list">
+              <span class="tag">Offline-First</span>
+              <span class="tag">Direct TCP/TLS</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-icon" aria-hidden="true">&#128274;</div>
+            <h3>Cryptographic Verification</h3>
+            <p>
+              Credentials and SSH private keys are encrypted via AndroidKeyStore AES-256-GCM.
+              FTPS, HTTPS, and SFTP enforce TOFU certificate pinning and <code>known_hosts</code> checks.
+            </p>
+            <div class="tag-list">
+              <span class="tag">AES-256-GCM</span>
+              <span class="tag">TLS 1.2 / 1.3</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-icon" aria-hidden="true">&#128737;</div>
+            <h3>Enterprise &amp; MDM Ready</h3>
+            <p>
+              Uses only documented Android SDK APIs with zero packers or trackers, and supports
+              Android Managed Configurations (<code>app_restrictions.xml</code>) for corporate EMM/MDM.
+            </p>
+            <div class="tag-list">
+              <span class="tag">RestrictionsManager</span>
+              <span class="tag">SBOM Included</span>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Module Showcase -->
+    <section id="modules" class="section">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-kicker">Core Modules</span>
+          <h2>Every capability, cleanly isolated by module.</h2>
+          <p>
+            Select a module below to inspect its actual implementation, supported protocols, and
+            underlying libraries from the Portly codebase.
+          </p>
+        </div>
+
+        <div class="tabs-bar" role="tablist" aria-label="Portly modules">
+          <button type="button" class="tab-btn" role="tab" aria-selected="true" aria-controls="panel-servers">Embedded Servers</button>
+          <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-clients">Remote Clients</button>
+          <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-files">File Manager &amp; Previews</button>
+          <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-transfers">Transfer Engine</button>
+          <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-pairing">LAN Peer Pairing</button>
+          <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-updater">In-App Updater</button>
+        </div>
+
+        <div id="panel-servers" class="module-panel" role="tabpanel">
+          <div>
+            <h3>Embedded Local Server Suite</h3>
+            <p>
+              Host FTP, FTPS, HTTP, and HTTPS file servers directly from Android using a persistent
+              <code>dataSync</code> foreground service with live client monitoring and one-tap disconnect.
+            </p>
+            <ul class="module-list">
+              <li><strong>HTTP &amp; HTTPS Web UI</strong>: Built-in browser file manager with login sessions, range requests (<code>206</code>), multipart upload, rename, mkdir, and batch delete.</li>
+              <li><strong>FTPS &amp; FTP Servers</strong>: Sandboxed filesystem supporting both local storage paths and SAF <code>DocumentFile</code> trees with per-user permissions.</li>
+              <li><strong>Brute-Force Protection</strong>: HTTP/HTTPS auth locks out after 5 failed attempts with a 30-second <code>429 Too Many Requests</code> cooldown.</li>
+              <li><strong>Safe Defaults</strong>: Servers are disabled until started and bind strictly to LAN IPv4 + loopback unless opted out.</li>
+            </ul>
+          </div>
+          <div class="module-meta">
+            <div class="meta-row"><span>FTP Server</span><code>:2121 (ftpserver-core)</code></div>
+            <div class="meta-row"><span>FTPS Server</span><code>:2122 (TLS 1.2/1.3)</code></div>
+            <div class="meta-row"><span>HTTP Server</span><code>:8080 (ktor-server-cio)</code></div>
+            <div class="meta-row"><span>HTTPS Server</span><code>:8443 (PKCS12 + CIO)</code></div>
+            <div class="meta-row"><span>Path Sandbox</span><code>PathValidator</code></div>
+          </div>
+        </div>
+
+        <div id="panel-clients" class="module-panel" role="tabpanel" hidden>
+          <div>
+            <h3>Multi-Protocol Remote Storage Client</h3>
+            <p>
+              Connect to remote servers, NAS appliances, and cloud-hosted WebDAV endpoints with saved
+              encrypted profiles, quick-connect URIs, and strict cryptographic trust verification.
+            </p>
+            <ul class="module-list">
+              <li><strong>SFTP (SSHv2)</strong>: Password or PEM private key (+ passphrase) authentication with Room-backed <code>known_hosts</code> SHA-256 verification.</li>
+              <li><strong>FTPS</strong>: Explicit &amp; Implicit TLS with TOFU SHA-256 certificate pinning in <code>TrustedCertDao</code>.</li>
+              <li><strong>WebDAV</strong>: HTTP/HTTPS <code>PROPFIND</code>, <code>MKCOL</code>, <code>MOVE</code>, <code>DELETE</code>, ranged downloads, Basic &amp; Digest auth.</li>
+              <li><strong>SMB</strong>: SMB 2.02&ndash;3.1.1 default dialect via jCIFS-NG; legacy SMB1 disabled unless explicitly opted in and allowed by MDM.</li>
+            </ul>
+          </div>
+          <div class="module-meta">
+            <div class="meta-row"><span>SFTP Engine</span><code>sshj 0.41.2</code></div>
+            <div class="meta-row"><span>FTP / FTPS</span><code>commons-net 3.13.0</code></div>
+            <div class="meta-row"><span>WebDAV Engine</span><code>okhttp 5.5.1</code></div>
+            <div class="meta-row"><span>SMB Engine</span><code>jcifs-ng 2.1.10</code></div>
+            <div class="meta-row"><span>Profile Export</span><code>PBKDF2 (600k) + AES-GCM</code></div>
+          </div>
+        </div>
+
+        <div id="panel-files" class="module-panel" role="tabpanel" hidden>
+          <div>
+            <h3>Dual-Pane File Manager, Archive &amp; Offline Previews</h3>
+            <p>
+              Browse internal storage, SD cards, USB OTG via Storage Access Framework, and remote
+              servers side by side &mdash; with built-in offline viewers so files stay sandboxed.
+            </p>
+            <ul class="module-list">
+              <li><strong>Dual-Pane Mode</strong>: Side-by-side local and remote panes with drag-and-drop on tablets and foldables (<code>&ge; 700dp</code>).</li>
+              <li><strong>Offline Previewers</strong>: Images (Coil 3), Video &amp; Audio (Media3 ExoPlayer), PDFs (<code>PdfRenderer</code>), CSV tables, and Text/Code.</li>
+              <li><strong>Secure ZIP Archives</strong>: Create, browse, and extract <code>.zip</code> files with strict Zip-Slip traversal rejection.</li>
+              <li><strong>Zero Auto-Execution</strong>: Downloaded files are never silently launched or installed.</li>
+            </ul>
+          </div>
+          <div class="module-meta">
+            <div class="meta-row"><span>Images</span><code>Coil 3 (3.6.3)</code></div>
+            <div class="meta-row"><span>Audio / Video</span><code>Media3 ExoPlayer 1.11.1</code></div>
+            <div class="meta-row"><span>PDF Viewer</span><code>Android PdfRenderer</code></div>
+            <div class="meta-row"><span>Archives</span><code>ZipArchiveManager</code></div>
+            <div class="meta-row"><span>Storage APIs</span><code>File + SAF DocumentFile</code></div>
+          </div>
+        </div>
+
+        <div id="panel-transfers" class="module-panel" role="tabpanel" hidden>
+          <div>
+            <h3>64KB Streaming Transfer Engine</h3>
+            <p>
+              Engineered for reliability over mobile and Wi-Fi networks with persistent Room queue
+              state, automatic pause/resume on connectivity changes, and integrity verification.
+            </p>
+            <ul class="module-list">
+              <li><strong>Concurrent Queue</strong>: Configurable concurrency and per-protocol semaphores with rolling speed and ETA calculation.</li>
+              <li><strong>Resumable Transfers</strong>: Uses <code>.part</code> staging files and byte-offset resume where supported by the protocol.</li>
+              <li><strong>Conflict Policies</strong>: Choose <code>ASK</code> (interactive dialog), <code>OVERWRITE</code>, <code>SKIP</code>, or <code>RENAME</code>.</li>
+              <li><strong>SHA-256 Verification</strong>: Streaming 64KB checksum verification via <code>ChecksumUtils</code>.</li>
+            </ul>
+          </div>
+          <div class="module-meta">
+            <div class="meta-row"><span>Stream Chunk</span><code>64 KB</code></div>
+            <div class="meta-row"><span>Queue Persistence</span><code>Room (TransferDao)</code></div>
+            <div class="meta-row"><span>Network Guard</span><code>NetworkTransferCoordinator</code></div>
+            <div class="meta-row"><span>Background</span><code>TransferForegroundService</code></div>
+            <div class="meta-row"><span>Reconciliation</span><code>TransferReconcileWorker</code></div>
+          </div>
+        </div>
+
+        <div id="panel-pairing" class="module-panel" role="tabpanel" hidden>
+          <div>
+            <h3>Instant LAN Discovery &amp; Peer Pairing</h3>
+            <p>
+              Pair two Android devices running Portly on the same Wi-Fi/LAN without typing hostnames
+              or passwords manually.
+            </p>
+            <ul class="module-list">
+              <li><strong>mDNS / NSD Discovery</strong>: Discovers <code>_portly._tcp.</code> and <code>_smb._tcp.</code> services via Android <code>NsdManager</code>.</li>
+              <li><strong>60-Second Ephemeral Tokens</strong>: Generates 192-bit <code>SecureRandom</code> single-use tokens encoded as <code>portly://pair</code> links and ZXing QR codes.</li>
+              <li><strong>Explicit Approval</strong>: Incoming pairing payloads always require user confirmation before saving a connection profile.</li>
+            </ul>
+          </div>
+          <div class="module-meta">
+            <div class="meta-row"><span>Discovery</span><code>NsdManager (UDP 5353)</code></div>
+            <div class="meta-row"><span>QR Generation</span><code>ZXing 3.5.4</code></div>
+            <div class="meta-row"><span>Token Entropy</span><code>192-bit SecureRandom</code></div>
+            <div class="meta-row"><span>Token Lifetime</span><code>60s Single-Use</code></div>
+            <div class="meta-row"><span>Deep Link</span><code>portly://pair</code></div>
+          </div>
+        </div>
+
+        <div id="panel-updater" class="module-panel" role="tabpanel" hidden>
+          <div>
+            <h3>Verified GitHub Releases Self-Updater</h3>
+            <p>
+              Stay current on Stable or Beta releases directly from GitHub Releases with periodic
+              WorkManager checks and a 5-stage cryptographic verification pipeline.
+            </p>
+            <ul class="module-list">
+              <li><strong>Channel Selection</strong>: Switch anytime between <strong>Stable Production</strong> and <strong>Beta Pre-release</strong> channels.</li>
+              <li><strong>Anti-Downgrade &amp; ID Check</strong>: Confirms package ID <code>com.portly.app</code> and strictly higher <code>versionCode</code>.</li>
+              <li><strong>SHA-256 &amp; Signing Pin</strong>: Verifies APK SHA-256 digest and signing certificate fingerprint before invoking Android Package Installer.</li>
+            </ul>
+          </div>
+          <div class="module-meta">
+            <div class="meta-row"><span>Source</span><code>GitHub Releases API</code></div>
+            <div class="meta-row"><span>Scheduler</span><code>AppUpdateWorker (24h)</code></div>
+            <div class="meta-row"><span>Channels</span><code>STABLE / BETA</code></div>
+            <div class="meta-row"><span>Verification</span><code>UpdateVerifier (5-stage)</code></div>
+            <div class="meta-row"><span>Custom Repo</span><code>Configurable in Settings</code></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Workflows -->
+    <section id="workflows" class="section">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-kicker">How It Works</span>
+          <h2>Practical workflows from tap to transfer.</h2>
+          <p>Three core journeys implemented across Portly&rsquo;s 7 top-level navigation destinations.</p>
+        </div>
+
+        <div class="grid-3">
+          <div class="card">
+            <h3>1. Share Files via Browser</h3>
+            <p>
+              Open <strong>Servers</strong>, pick your root folder (internal storage or SAF tree),
+              and start the <strong>HTTPS Server (:8443)</strong>. Any desktop or mobile browser on
+              your LAN can authenticate, browse, stream, and upload files securely.
+            </p>
+          </div>
+          <div class="card">
+            <h3>2. Connect to NAS or Server</h3>
+            <p>
+              Open <strong>Connect</strong> or enter a quick-connect URI on <strong>Home</strong>
+              (e.g., <code>sftp://</code>, <code>smb://</code>, <code>ftps://</code>). Verify the
+              host key or TLS fingerprint once via TOFU pinning, then browse in <strong>Files</strong>.
+            </p>
+          </div>
+          <div class="card">
+            <h3>3. Audit &amp; Export Diagnostics</h3>
+            <p>
+              Review every transfer and server event in <strong>History</strong> with configurable
+              7 / 30 / 90-day retention, or export a <code>LogRedactor</code>-sanitized JSON
+              diagnostic bundle from <strong>Settings</strong>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Security & Enterprise -->
+    <section id="security" class="section">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-kicker">Security &amp; Privacy Architecture</span>
+          <h2>Engineered around strict trust boundaries.</h2>
+          <p>
+            Every security control below is directly implemented in <code>core-security</code>,
+            <code>core-common</code>, and <code>app_restrictions.xml</code>.
+          </p>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>Credential &amp; Storage Hardening</h3>
+            <ul class="module-list">
+              <li><strong>AndroidKeyStore AES-256-GCM</strong>: Passwords, SSH private keys, and server credentials are stored as ciphertexts in Room <code>CredentialVault</code>.</li>
+              <li><strong>No Cloud Backups</strong>: Manifest sets <code>android:allowBackup="false"</code> and <code>android:usesCleartextTraffic="false"</code>.</li>
+              <li><strong>PathValidator</strong>: Canonicalizes all server paths and ZIP entries, blocking null bytes, <code>..</code> escapes, and symlinks outside the root.</li>
+              <li><strong>Biometric Gate</strong>: Optional or MDM-enforced <code>BiometricPrompt</code> unlock at app launch and server settings changes.</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <h3>Enterprise MDM Managed Configurations</h3>
+            <p>
+              IT administrators can enforce policies via Android <code>RestrictionsManager</code>
+              (<code>app/src/main/res/xml/app_restrictions.xml</code>):
+            </p>
+            <ul class="module-list">
+              <li><code>disable_plain_ftp</code> &mdash; Blocks starting unencrypted FTP servers.</li>
+              <li><code>disable_smb1_legacy</code> &mdash; Locks SMB1 off; enforces SMB 2.02&ndash;3.1.1.</li>
+              <li><code>allow_public_server_bind</code> &mdash; Forces LAN/loopback-only server binding.</li>
+              <li><code>require_biometric_lock</code> &mdash; Mandates biometric/device credential lock.</li>
+              <li><code>disable_servers</code> &amp; <code>diagnostic_logging_enabled</code> &mdash; Controls server availability and audit logging.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Technical Specs & Compatibility -->
+    <section id="specs" class="section">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-kicker">Technical Specifications</span>
+          <h2>Protocol matrix &amp; verified test scope.</h2>
+          <p>
+            Portly passes 18 JVM/embedded integration test suites (46 tests, 0 failures) as
+            documented in <code>SECURITY.md</code> and <code>COMPATIBILITY.md</code>.
+          </p>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Protocol / Engine</th>
+                <th>Role</th>
+                <th>Default Port</th>
+                <th>Transport &amp; Security</th>
+                <th>Library</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>SFTP</strong></td>
+                <td>Remote Client</td>
+                <td><code>22</code></td>
+                <td>SSHv2, Password / PEM Key, <code>known_hosts</code> SHA-256</td>
+                <td><code>sshj 0.41.2</code></td>
+              </tr>
+              <tr>
+                <td><strong>FTPS</strong></td>
+                <td>Client &amp; Server</td>
+                <td><code>21 / 2122</code></td>
+                <td>Explicit &amp; Implicit TLS 1.2/1.3, TOFU Pinning</td>
+                <td><code>commons-net</code> / <code>ftpserver-core</code></td>
+              </tr>
+              <tr>
+                <td><strong>HTTPS</strong></td>
+                <td>Embedded Server</td>
+                <td><code>8443</code></td>
+                <td>TLS 1.2/1.3 PKCS12, HttpOnly cookie, 429 lockout</td>
+                <td><code>ktor-server-cio 3.6.1</code></td>
+              </tr>
+              <tr>
+                <td><strong>HTTP</strong></td>
+                <td>Embedded Server</td>
+                <td><code>8080</code></td>
+                <td>LAN/Loopback default, Range <code>206</code>, 429 lockout</td>
+                <td><code>ktor-server-cio 3.6.1</code></td>
+              </tr>
+              <tr>
+                <td><strong>WebDAV</strong></td>
+                <td>Remote Client</td>
+                <td><code>80 / 443</code></td>
+                <td>Basic &amp; Digest Auth, HTTPS TLS Pinning</td>
+                <td><code>okhttp 5.5.1</code></td>
+              </tr>
+              <tr>
+                <td><strong>SMB</strong></td>
+                <td>Remote Client</td>
+                <td><code>445</code></td>
+                <td>SMB 2.02&ndash;3.1.1 default (opt-in SMB1)</td>
+                <td><code>jcifs-ng 2.1.10</code></td>
+              </tr>
+              <tr>
+                <td><strong>FTP</strong></td>
+                <td>Client &amp; Server</td>
+                <td><code>21 / 2121</code></td>
+                <td>Explicit plain-text warning, PathValidator sandbox</td>
+                <td><code>commons-net</code> / <code>ftpserver-core</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Documentation Index -->
+    <section id="docs" class="section">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-kicker">Documentation</span>
+          <h2>Transparent specs, SBOM, and audit guides.</h2>
+          <p>All documentation lives alongside the source code in the Portly repository.</p>
+        </div>
+
+        <div class="grid-3">
+          <a class="card" href="./ENTERPRISE_DEPLOYMENT.md">
+            <h3>Enterprise Deployment</h3>
+            <p>MDM/EMM restrictions, Android permissions declaration, network matrix, and AV/EDR triage.</p>
+          </a>
+          <a class="card" href="./COMPATIBILITY.md">
+            <h3>Compatibility Matrix</h3>
+            <p>SDK targets (API 26&ndash;37), embedded integration test results, and untested external scopes.</p>
+          </a>
+          <a class="card" href="./SBOM.md">
+            <h3>SBOM &amp; Dependencies</h3>
+            <p>Software Bill of Materials, CycloneDX 1.5 JSON (<code>sbom.cdx.json</code>), and open-source licenses.</p>
+          </a>
+          <a class="card" href="https://github.com/OffensiveKrish/Portly/blob/main/SECURITY.md" target="_blank" rel="noopener noreferrer">
+            <h3>Security Architecture</h3>
+            <p>OWASP MASVS self-assessment, threat model, signing certificate fingerprint, and disclosure policy.</p>
+          </a>
+          <a class="card" href="https://github.com/OffensiveKrish/Portly/blob/main/PRIVACY.md" target="_blank" rel="noopener noreferrer">
+            <h3>Privacy Policy</h3>
+            <p>Zero telemetry, zero analytics SDKs, local credential encryption, and GitHub update requests.</p>
+          </a>
+          <a class="card" href="./RELEASE_PROCESS.md">
+            <h3>Release Process</h3>
+            <p>CalVer versioning (<code>YYYY.MM.PATCH</code>), reproducible signing, and CI/CD release workflows.</p>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq" class="section">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-kicker">Frequently Asked Questions</span>
+          <h2>Common questions from users and IT admins.</h2>
+        </div>
+
+        <div class="faq-list">
+          <div class="faq-item">
+            <button type="button" class="faq-trigger" aria-expanded="false" aria-controls="faq-1">
+              <span>Does Portly require root access?</span>
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </button>
+            <div id="faq-1" class="faq-panel" hidden>
+              No. Portly runs on standard unprivileged ports (2121, 2122, 8080, 8443) and uses only
+              documented Android SDK APIs including Storage Access Framework and Foreground Services.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button type="button" class="faq-trigger" aria-expanded="false" aria-controls="faq-2">
+              <span>Does Portly collect any analytics or crash telemetry?</span>
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </button>
+            <div id="faq-2" class="faq-panel" hidden>
+              No. Portly contains zero analytics SDKs, zero ad trackers, and zero background cloud sync.
+              The only external network call Portly makes on its own is querying GitHub Releases for
+              updates (which you can disable anytime in Settings).
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button type="button" class="faq-trigger" aria-expanded="false" aria-controls="faq-3">
+              <span>How are my saved server passwords and SSH keys protected?</span>
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </button>
+            <div id="faq-3" class="faq-panel" hidden>
+              All secrets are encrypted with hardware-backed <strong>AES-256-GCM</strong> via
+              <code>AndroidKeyStore</code> before being stored in the private Room database, and
+              <code>android:allowBackup="false"</code> prevents unencrypted cloud backups.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button type="button" class="faq-trigger" aria-expanded="false" aria-controls="faq-4">
+              <span>Can I verify the APK before installing?</span>
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </button>
+            <div id="faq-4" class="faq-panel" hidden>
+              Yes. Every GitHub Release includes <code>SHA256SUMS.txt</code> and
+              <code>update-metadata.json</code>, and Portly&rsquo;s built-in updater checks package ID,
+              version code, SHA-256 hash, and signing certificate fingerprint automatically.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Download & Verification -->
+    <section id="download" class="section">
+      <div class="container">
+        <div class="cta-banner">
+          <div>
+            <span class="section-kicker">Get Portly</span>
+            <h2 style="margin: 0 0 10px;">Download &amp; verify in seconds.</h2>
+            <p style="margin: 0 0 20px; color: var(--text-muted);">
+              Distributed as a signed Universal APK (ARM64-v8a, ARMv7a, x86_64) for Android 8.0+
+              via GitHub Releases. Licensed under GNU GPL-3.0-or-later.
+            </p>
+            <div class="hero-ctas" style="margin-bottom: 0;">
+              <a
+                href="https://github.com/OffensiveKrish/Portly/releases"
+                class="btn btn-primary"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Open GitHub Releases
+              </a>
+              <a
+                href="https://github.com/OffensiveKrish/Portly"
+                class="btn btn-secondary"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Build From Source
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <strong style="font-size: 0.9rem;">Verify APK SHA-256 &amp; Signing Certificate:</strong>
+            <div class="code-box">
+              <button type="button" class="copy-btn" data-copy="verify-sha">Copy</button>
+              <code id="verify-sha">sha256sum Portly-v2026.11.1-universal.apk</code>
+            </div>
+            <div class="code-box">
+              <button type="button" class="copy-btn" data-copy="verify-sig">Copy</button>
+              <code id="verify-sig">apksigner verify --print-certs Portly-v2026.11.1-universal.apk</code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <a href="#top" class="brand" style="margin-bottom: 12px;">
+            <img src="./assets/ic_portly_logo.png" alt="Portly Logo" width="32" height="32" />
+            <span>Portly</span>
+          </a>
+          <p style="margin: 0; max-width: 34ch;">
+            Modern Android local server suite and multi-protocol storage client. Free &amp; Open
+            Source Software under GNU GPL-3.0-or-later.
+          </p>
+        </div>
+
+        <div class="footer-col">
+          <h4>Product</h4>
+          <ul>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#modules">Modules</a></li>
+            <li><a href="#workflows">Workflows</a></li>
+            <li><a href="#security">Security</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Documentation</h4>
+          <ul>
+            <li><a href="./ENTERPRISE_DEPLOYMENT.md">Enterprise Deployment</a></li>
+            <li><a href="./COMPATIBILITY.md">Compatibility Matrix</a></li>
+            <li><a href="./SBOM.md">SBOM</a></li>
+            <li><a href="./DEPENDENCIES.md">Dependencies</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Project &amp; Contact</h4>
+          <ul>
+            <li><a href="https://github.com/OffensiveKrish/Portly" target="_blank" rel="noopener noreferrer">GitHub Repository</a></li>
+            <li><a href="https://github.com/OffensiveKrish/Portly/releases" target="_blank" rel="noopener noreferrer">Releases</a></li>
+            <li><a href="https://github.com/OffensiveKrish/Portly/issues" target="_blank" rel="noopener noreferrer">Issue Tracker</a></li>
+            <li><a href="mailto:support@portly.app">support@portly.app</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>&copy; 2026 Portly Project (OffensiveKrish) &bull; GNU GPL-3.0-or-later</span>
+        <span>Connect. Transfer. Manage. Anywhere.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>
